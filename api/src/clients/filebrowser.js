@@ -41,18 +41,31 @@ async function fbFetch(path, options = {}, retried = false) {
 
 export async function searchFilebrowser(query) {
   const res = await fbFetch(`/api/search/?query=${encodeURIComponent(query)}`);
-  const results = await res.json();
+  // Filebrowser streams one JSON object per line (NDJSON, not a JSON array)
+  // with only {dir, path} — no name/size/modified — and an empty body
+  // (not `[]`) when nothing matches.
+  const body = await res.text();
+  const entries = body
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => JSON.parse(line))
+    .filter((entry) => !entry.dir);
 
-  return (results ?? []).map((entry) => ({
-    source: 'filebrowser',
-    type: 'file',
-    id: entry.path,
-    name: entry.name ?? entry.path.split('/').pop(),
-    createdAt: entry.modified ?? null,
-    size: entry.size ?? null,
-    thumbnailUrl: null,
-    url: `/api/media/filebrowser${entry.path}`,
-  }));
+  return entries.map((entry) => {
+    // Filebrowser's search results omit the leading slash that /api/raw
+    // and /api/resources both require.
+    const path = entry.path.startsWith('/') ? entry.path : `/${entry.path}`;
+    return {
+      source: 'filebrowser',
+      type: 'file',
+      id: path,
+      name: path.split('/').pop(),
+      createdAt: null,
+      size: null,
+      thumbnailUrl: null,
+      url: `/api/media/filebrowser${path}`,
+    };
+  });
 }
 
 export async function uploadToFilebrowser(file, destPath) {
