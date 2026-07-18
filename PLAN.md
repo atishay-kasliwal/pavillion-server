@@ -46,7 +46,52 @@ without exposing the home network or opening router ports.
      pipeline for now — not worth the RAM pressure unless a concrete need
      for semantic search over text docs shows up later.
 
-4. **Power/availability model: on-demand, not always-on**
+4. **Custom API + UI layer at `archive.atishaykasliwal.com`**
+   - Goal: one cohesive, custom-designed interface with real actions
+     (upload/organize, search), instead of three separate app UIs.
+   - Searched for an existing open-source project that already does this
+     (unified custom UI/API wrapping Immich + Navidrome + a file manager)
+     — nothing fits. Nextcloud is the closest all-in-one, but it's
+     heavier on RAM and its photo search (no CLIP) and music app (no
+     proper Subsonic support) are both a downgrade from what Immich/
+     Navidrome already give us for free. Decision: **wrap, don't
+     replace.**
+   - **Backend services stay untouched.** Immich, Navidrome, and
+     Filebrowser run as-is via Docker Compose — no forking/patching, so
+     upstream updates keep working with zero maintenance burden.
+   - **One thin custom API service** (language/framework TBD — Node or
+     Python, lightweight) sits in front of them and only: aggregates
+     search across all three, proxies uploads to the right backend by
+     file type, and normalizes responses into one consistent shape for
+     the UI. It stays a translator, not a reimplementation of
+     storage/ML/transcoding.
+   - **Frontend is built and iterated on a separate computer**, not on
+     this server — this repo/server only needs to run the API and serve
+     the backends. Reference for API-on-top-of-Immich patterns:
+     [immich-power-tools](https://github.com/immich-power-tools/immich-power-tools)
+     (third-party UI built entirely on Immich's public API).
+   - **Hosting split** to stay comfortably inside Cloudflare's free tier:
+     - Static frontend build → **Cloudflare Pages** (free, effectively
+       unlimited bandwidth for static assets, globally cached). Deployed
+       from the other computer, independent of the laptop.
+     - `archive.atishaykasliwal.com` (the public hostname through the
+       Tunnel) points at the **custom API only** — not three separate
+       subdomains per backend. The API calls Immich/Navidrome/Filebrowser
+       on `localhost`. Smaller attack surface, one thing to keep patched
+       and exposed.
+     - Only JSON + actual media bytes the user opens ever cross the
+       Tunnel — never UI chrome/JS/CSS on every page load. This is the
+       main lever keeping traffic inside Cloudflare's "reasonable
+       personal use" expectations for the Tunnel (their gray area is
+       bulk/commercial file serving, not one person browsing their own
+       archive occasionally, especially since Immich/Navidrome serve
+       thumbnails/transcoded streams by default rather than raw
+       originals).
+   - **Auth via Cloudflare Access**, not custom login/session code — free
+     up to 50 users, gates the whole hostname before traffic reaches the
+     laptop, hands the API a verified identity header.
+
+5. **Power/availability model: on-demand, not always-on**
    - Data isn't needed daily, so the laptop does not need to run 24/7 —
      this also avoids the wear/thermal/power concerns of continuous
      laptop uptime.
@@ -93,6 +138,12 @@ without exposing the home network or opening router ports.
 - [ ] Set up Cloudflare Access in front of the tunnel
 - [ ] Deploy Immich, Navidrome, Filebrowser via Docker Compose
 - [ ] Configure systemd auto-start for the full stack on boot
+- [ ] Pick language/framework for the custom API service
+- [ ] Build custom API: search aggregation, upload proxy, response
+      normalization across Immich/Navidrome/Filebrowser
+- [ ] Set up Cloudflare Pages project for the frontend (built separately,
+      on the other computer)
+- [ ] Point `archive.atishaykasliwal.com` at the custom API via the Tunnel
 - [ ] Build/deploy Cloudflare Worker for the "archive not available"
       fallback page
 - [ ] Test end-to-end: power on → auto-start → reachable via
