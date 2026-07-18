@@ -37,6 +37,12 @@ services:
       REDIS_HOSTNAME: immich-redis
     ports:
       - '127.0.0.1:2283:2283'
+      # Also bound to the Tailscale IP so the official Immich mobile app can
+      # reach it directly for camera-roll auto-backup, independent of
+      # archive-api/the frontend. Still not reachable off-box otherwise —
+      # UFW only allows this port in on the tailscale0 interface (see
+      # README "Direct native-app access over Tailscale").
+      - '${TAILSCALE_IP}:2283:2283'
     depends_on:
       - immich-redis
       - immich-database

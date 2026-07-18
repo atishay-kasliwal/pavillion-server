@@ -58,6 +58,26 @@ docker compose --profile ml up -d # with CLIP search / face detection
 Immich, Navidrome, and Filebrowser bind to `127.0.0.1` only — nothing is
 exposed off-box except `archive-api`, which is what the tunnel points at.
 
+### Direct native-app access over Tailscale
+
+Immich's own mobile app (camera-roll auto-backup) needs to reach Immich
+directly — it doesn't go through archive-api. Rather than expose it
+publicly, Immich is *also* bound to this machine's Tailscale IP
+(`TAILSCALE_IP` in `.env`), with a UFW rule scoped to just the
+`tailscale0` interface (`sudo ufw status` shows it as `2283/tcp on
+tailscale0`) — so it's reachable from your own devices over the tailnet,
+but not from the LAN or public internet.
+
+To set up the mobile app: install Tailscale on the phone, log into the
+same tailnet, install the Immich app, and set the server URL to
+`http://<TAILSCALE_IP>:2283`. Log in with the existing Immich account.
+Enable background/camera-roll backup in the app's settings.
+
+The same pattern (extra port binding + a `ufw allow ... on tailscale0`
+rule) can be applied to Navidrome (4533) or Filebrowser (8091) later if
+native-app access to those is wanted too — nobody's asked for that yet,
+so it isn't done.
+
 ## The API
 
 `GET /api/search?q=...` — aggregates search across Immich (CLIP smart
