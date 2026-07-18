@@ -72,13 +72,18 @@ services:
 
   immich-database:
     container_name: immich_database
-    image: docker.io/tensorchord/pgvecto-rs:pg14-v0.2.0
+    # Immich's server dropped pgvecto-rs support for the vectorchord/pgvector
+    # extensions this image ships — pinned to Immich's own official Postgres
+    # image, which is the one their server code actually expects.
+    image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0
     environment:
       POSTGRES_USER: immich
       POSTGRES_PASSWORD: ${IMMICH_DB_PASSWORD}
       POSTGRES_DB: immich
+      POSTGRES_INITDB_ARGS: '--data-checksums'
     volumes:
       - ${FAST_LOCATION}/immich-pgdata:/var/lib/postgresql/data
+    shm_size: 128mb
     restart: unless-stopped
     mem_limit: 600m
 
