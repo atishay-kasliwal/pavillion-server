@@ -1,0 +1,13 @@
+# Copy to wrangler.toml, fill in account_id, then:
+#   cd worker && wrangler deploy
+#
+# Find account_id with `wrangler whoami` or in the Cloudflare dashboard URL.
+
+name = "pavillion-fallback"
+main = "fallback-worker.js"
+compatibility_date = "2024-11-01"
+account_id = "<YOUR_CLOUDFLARE_ACCOUNT_ID>"
+
+routes = [
+  { pattern = "archive.atishaykasliwal.com/*", zone_name = "atishaykasliwal.com" }
+]

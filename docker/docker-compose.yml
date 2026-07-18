@@ -1,0 +1,131 @@
+name: pavillion
+
+# Personal archive stack: Immich (photos), Navidrome (music), Filebrowser
+# (everything else), and the custom API that sits in front of all three.
+#
+# Only container-to-container traffic uses service names on the internal
+# compose network. Host port bindings below are all pinned to 127.0.0.1 so
+# nothing is reachable off-box except through the Cloudflare Tunnel, which
+# only forwards to the archive-api container (see cloudflared/config.yml).
+#
+# RAM budget note (see PLAN.md — ~6 GB total, tight):
+# `immich-machine-learning` (CLIP search, face detection) is the heaviest
+# single piece. It's behind the `ml` profile so it's opt-in:
+#   docker compose --profile ml up -d     # with ML features
+#   docker compose up -d                  # without them, if memory is tight
+
+services:
+  immich-server:
+    container_name: immich_server
+    image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:-release}
+    volumes:
+      - ${UPLOAD_LOCATION}:/usr/src/app/upload
+      - /etc/localtime:/etc/localtime:ro
+    env_file:
+      - .env
+    environment:
+      DB_HOSTNAME: immich-database
+      DB_USERNAME: immich
+      DB_PASSWORD: ${IMMICH_DB_PASSWORD}
+      DB_DATABASE_NAME: immich
+      REDIS_HOSTNAME: immich-redis
+    ports:
+      - '127.0.0.1:2283:2283'
+    depends_on:
+      - immich-redis
+      - immich-database
+    restart: unless-stopped
+    mem_limit: 1200m
+
+  immich-machine-learning:
+    container_name: immich_machine_learning
+    image: ghcr.io/immich-app/immich-machine-learning:${IMMICH_VERSION:-release}
+    volumes:
+      - model-cache:/cache
+    env_file:
+      - .env
+    restart: unless-stopped
+    profiles:
+      - ml
+    mem_limit: 1500m
+    # Uncomment to use the GTX 1050 via CUDA (requires nvidia-container-toolkit
+    # on the host — see README "GPU acceleration for ML").
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+  immich-redis:
+    container_name: immich_redis
+    image: docker.io/valkey/valkey:8-bookworm
+    restart: unless-stopped
+    mem_limit: 150m
+
+  immich-database:
+    container_name: immich_database
+    image: docker.io/tensorchord/pgvecto-rs:pg14-v0.2.0
+    environment:
+      POSTGRES_USER: immich
+      POSTGRES_PASSWORD: ${IMMICH_DB_PASSWORD}
+      POSTGRES_DB: immich
+    volumes:
+      - immich-pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    mem_limit: 600m
+
+  navidrome:
+    container_name: navidrome
+    image: deluan/navidrome:latest
+    environment:
+      ND_SCANSCHEDULE: 1h
+      ND_LOGLEVEL: ${ND_LOGLEVEL:-info}
+      ND_SESSIONTIMEOUT: 24h
+    volumes:
+      - ${NAVIDROME_DB_LOCATION}:/data
+      - ${MUSIC_LOCATION}:/music:ro
+    ports:
+      - '127.0.0.1:4533:4533'
+    restart: unless-stopped
+    mem_limit: 300m
+
+  filebrowser:
+    container_name: filebrowser
+    image: filebrowser/filebrowser:latest
+    volumes:
+      - ${FILEBROWSER_ROOT}:/srv
+      - ${FILEBROWSER_DB_LOCATION}:/database
+    environment:
+      FB_DATABASE: /database/filebrowser.db
+    ports:
+      - '127.0.0.1:8091:80'
+    restart: unless-stopped
+    mem_limit: 100m
+
+  archive-api:
+    container_name: archive_api
+    build:
+      context: ../api
+    env_file:
+      - .env
+    environment:
+      PORT: ${API_PORT:-8090}
+      MUSIC_DIR: /music
+    volumes:
+      # Read-write: music uploads land here, then Navidrome (mounted
+      # read-only on the same host path) is told to rescan.
+      - ${MUSIC_LOCATION}:/music
+    ports:
+      - '127.0.0.1:${API_PORT:-8090}:${API_PORT:-8090}'
+    depends_on:
+      - immich-server
+      - navidrome
+      - filebrowser
+    restart: unless-stopped
+    mem_limit: 150m
+
+volumes:
+  immich-pgdata:
+  model-cache:

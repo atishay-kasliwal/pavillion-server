@@ -1,0 +1,8 @@
+node_modules/
+.env
+docker/.env
+*.log
+
+# wrangler
+worker/.wrangler/
+worker/node_modules/

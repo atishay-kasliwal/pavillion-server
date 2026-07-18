@@ -82,7 +82,14 @@ without exposing the home network or opening router ports.
 - Is `atishaykasliwal.com`'s DNS already managed through Cloudflare? Not
   yet confirmed.
 
-## Next Steps (not started yet)
+## Next Steps
+
+Software scaffolding for everything below the OS layer now lives in this
+repo (see [README.md](README.md) for layout and setup order): Docker
+Compose stack for Immich/Navidrome/Filebrowser + the custom API,
+`cloudflared` config template, systemd units, and the Cloudflare Worker
+fallback page. What's left is either physical/one-time-account work or
+wiring the scaffolding up on the real server:
 
 - [ ] Confirm `atishaykasliwal.com` DNS is on Cloudflare
 - [ ] Check BIOS for AC auto-power-on support
@@ -90,10 +97,18 @@ without exposing the home network or opening router ports.
 - [ ] Wipe laptop, install Ubuntu Server 24.04 LTS
 - [ ] Install Docker + Docker Compose
 - [ ] Set up `cloudflared` tunnel + DNS record + systemd auto-start
+      (`cloudflared/config.yml.example`, `systemd/pavillion-cloudflared.service`)
 - [ ] Set up Cloudflare Access in front of the tunnel
 - [ ] Deploy Immich, Navidrome, Filebrowser via Docker Compose
+      (`docker/docker-compose.yml`)
 - [ ] Configure systemd auto-start for the full stack on boot
-- [ ] Build/deploy Cloudflare Worker for the "archive not available"
-      fallback page
+      (`systemd/pavillion-stack.service`)
+- [ ] Deploy the custom API (`api/`) — search aggregation, upload proxy,
+      response normalization across Immich/Navidrome/Filebrowser: done in
+      this repo, needs a real `docker/.env` and API keys to run for real
+- [ ] Deploy Cloudflare Worker for the "archive not available" fallback
+      page (`worker/`)
+- [ ] Set up Cloudflare Pages project for the frontend (built separately,
+      on the other computer)
 - [ ] Test end-to-end: power on → auto-start → reachable via
       `atishaykasliwal.com` → power off → clean offline message
