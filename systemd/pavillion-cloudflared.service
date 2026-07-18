@@ -1,0 +1,23 @@
+# Install: sudo cp systemd/pavillion-cloudflared.service /etc/systemd/system/
+#          sudo cp cloudflared/config.yml.example /etc/cloudflared/config.yml   (edit tunnel ID first)
+#          sudo systemctl daemon-reload
+#          sudo systemctl enable --now pavillion-cloudflared.service
+#
+# Runs the tunnel headless on boot. Requires the archive-api container
+# (started by pavillion-stack.service) to be up for the tunnel to have
+# anything useful to proxy to, hence the ordering below.
+
+[Unit]
+Description=Cloudflare Tunnel for the Pavillion archive
+After=network-online.target pavillion-stack.service
+Wants=network-online.target
+Requires=pavillion-stack.service
+
+[Service]
+Type=notify
+ExecStart=/usr/bin/cloudflared tunnel --config /etc/cloudflared/config.yml run
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

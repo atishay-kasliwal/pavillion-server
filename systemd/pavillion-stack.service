@@ -1,0 +1,24 @@
+# Install: sudo cp systemd/pavillion-stack.service /etc/systemd/system/
+#          sudo systemctl daemon-reload
+#          sudo systemctl enable --now pavillion-stack.service
+#
+# Brings up the Docker Compose stack (docker/docker-compose.yml) on boot,
+# headless, no login required. Adjust WorkingDirectory to wherever this
+# repo actually lives on the server.
+
+[Unit]
+Description=Pavillion archive stack (Immich, Navidrome, Filebrowser, API)
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/pavillion-server/docker
+ExecStart=/usr/bin/docker compose up -d
+ExecStop=/usr/bin/docker compose down
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target

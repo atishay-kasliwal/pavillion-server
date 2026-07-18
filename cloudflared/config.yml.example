@@ -1,0 +1,19 @@
+# Copy to /etc/cloudflared/config.yml on the server (or ~/.cloudflared/) and
+# fill in the tunnel ID created via:
+#   cloudflared tunnel login
+#   cloudflared tunnel create pavillion
+#   cloudflared tunnel route dns pavillion archive.atishaykasliwal.com
+#
+# Credentials file path below is printed by `tunnel create` — usually
+# /etc/cloudflared/<TUNNEL_ID>.json or ~/.cloudflared/<TUNNEL_ID>.json.
+
+tunnel: pavillion
+credentials-file: /etc/cloudflared/<TUNNEL_ID>.json
+
+# Only the custom API is exposed publicly, per PLAN.md — Immich/Navidrome/
+# Filebrowser stay on 127.0.0.1 and are reached by archive-api over the
+# docker network, never directly through the tunnel.
+ingress:
+  - hostname: archive.atishaykasliwal.com
+    service: http://127.0.0.1:8090
+  - service: http_status:404
