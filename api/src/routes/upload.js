@@ -5,7 +5,7 @@ import fs from 'node:fs/promises';
 import { config } from '../config.js';
 import { uploadToImmich } from '../clients/immich.js';
 import { triggerNavidromeScan } from '../clients/navidrome.js';
-import { uploadToFilebrowser } from '../clients/filebrowser.js';
+import { uploadToFilebrowser, createFilebrowserFolder } from '../clients/filebrowser.js';
 
 export const uploadRouter = Router();
 
@@ -44,7 +44,21 @@ uploadRouter.post('/upload', upload.single('file'), async (req, res, next) => {
       return res.status(201).json({ destination, path: target });
     }
 
-    const destPath = `/${path.basename(req.file.originalname)}`;
+    // Optional multipart field `folder` lets the caller preserve a
+    // destination directory instead of always flattening to the root.
+    const folder = String(req.body.folder ?? '').replace(/^\/+|\/+$/g, '');
+    if (folder) {
+      try {
+        await createFilebrowserFolder(folder);
+      } catch (folderErr) {
+        // Already exists is fine (a prior upload into the same folder) —
+        // anything else (permissions, backend down) should still surface.
+        if (!/-> 409/.test(folderErr.message)) throw folderErr;
+      }
+    }
+    const destPath = folder
+      ? `/${folder}/${path.basename(req.file.originalname)}`
+      : `/${path.basename(req.file.originalname)}`;
     await uploadToFilebrowser(req.file, destPath);
     return res.status(201).json({ destination, path: destPath });
   } catch (err) {

@@ -16,6 +16,19 @@ async function immichFetch(path, options = {}) {
   return res;
 }
 
+function mapImmichAsset(asset) {
+  return {
+    source: 'immich',
+    type: asset.type === 'VIDEO' ? 'video' : 'photo',
+    id: asset.id,
+    name: asset.originalFileName,
+    createdAt: asset.fileCreatedAt,
+    size: asset.exifInfo?.fileSizeInByte ?? null,
+    thumbnailUrl: `/api/media/immich/${asset.id}/thumbnail`,
+    url: `/api/media/immich/${asset.id}/original`,
+  };
+}
+
 // Uses Immich's smart (CLIP) search when available, which is the whole
 // reason we're not building a separate vector search pipeline — see
 // PLAN.md "Application stack". Falls back to metadata/filename search on
@@ -39,16 +52,42 @@ export async function searchImmich(query) {
   }
 
   const items = body?.assets?.items ?? [];
-  return items.map((asset) => ({
-    source: 'immich',
-    type: asset.type === 'VIDEO' ? 'video' : 'photo',
-    id: asset.id,
-    name: asset.originalFileName,
-    createdAt: asset.fileCreatedAt,
-    size: asset.exifInfo?.fileSizeInByte ?? null,
-    thumbnailUrl: `/api/media/immich/${asset.id}/thumbnail`,
-    url: `/api/media/immich/${asset.id}/original`,
+  return items.map(mapImmichAsset);
+}
+
+// Browse (not search) — the timeline in upload-recency order, paginated.
+// Same /search/metadata endpoint as the fallback above, just with no
+// filter, since Immich has no dedicated "list everything" route.
+export async function listImmichAssets(page = 1, size = 50) {
+  const res = await immichFetch('/api/search/metadata', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ page, size }),
+  });
+  const body = await res.json();
+  return {
+    items: (body?.assets?.items ?? []).map(mapImmichAsset),
+    nextPage: body?.assets?.nextPage ?? null,
+  };
+}
+
+export async function listImmichAlbums() {
+  const res = await immichFetch('/api/albums');
+  const albums = await res.json();
+  return albums.map((album) => ({
+    id: album.id,
+    name: album.albumName,
+    assetCount: album.assetCount,
+    thumbnailUrl: album.albumThumbnailAssetId
+      ? `/api/media/immich/${album.albumThumbnailAssetId}/thumbnail`
+      : null,
   }));
+}
+
+export async function listImmichAlbumAssets(albumId) {
+  const res = await immichFetch(`/api/albums/${albumId}`);
+  const album = await res.json();
+  return (album?.assets ?? []).map(mapImmichAsset);
 }
 
 export async function uploadToImmich(file) {

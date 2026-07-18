@@ -34,11 +34,8 @@ async function subsonicGet(endpoint, extraParams = {}) {
   return inner;
 }
 
-export async function searchNavidrome(query) {
-  const result = await subsonicGet('search3', { query, songCount: 25, albumCount: 0, artistCount: 0 });
-  const songs = result.searchResult3?.song ?? [];
-
-  return songs.map((song) => ({
+function mapNavidromeSong(song) {
+  return {
     source: 'navidrome',
     type: 'audio',
     id: song.id,
@@ -47,7 +44,51 @@ export async function searchNavidrome(query) {
     size: song.size ?? null,
     thumbnailUrl: `/api/media/navidrome/${song.id}/cover`,
     url: `/api/media/navidrome/${song.id}/stream`,
+  };
+}
+
+export async function searchNavidrome(query) {
+  const result = await subsonicGet('search3', { query, songCount: 25, albumCount: 0, artistCount: 0 });
+  const songs = result.searchResult3?.song ?? [];
+  return songs.map(mapNavidromeSong);
+}
+
+// Browse (not search) — the library, top-down: artists -> albums -> songs.
+export async function listNavidromeArtists() {
+  let result;
+  try {
+    result = await subsonicGet('getArtists');
+  } catch (err) {
+    // Navidrome errors instead of returning an empty index when nothing's
+    // been scanned into the library yet — that's a legitimate empty state,
+    // not a failure, so it shouldn't surface as a 500.
+    if (/library not found or empty/i.test(err.message)) return [];
+    throw err;
+  }
+  const indexes = result.artists?.index ?? [];
+  return indexes.flatMap((idx) => idx.artist ?? []).map((artist) => ({
+    id: artist.id,
+    name: artist.name,
+    albumCount: artist.albumCount ?? 0,
   }));
+}
+
+export async function listNavidromeArtistAlbums(artistId) {
+  const result = await subsonicGet('getArtist', { id: artistId });
+  const albums = result.artist?.album ?? [];
+  return albums.map((album) => ({
+    id: album.id,
+    name: album.name,
+    year: album.year ?? null,
+    songCount: album.songCount ?? 0,
+    thumbnailUrl: `/api/media/navidrome/${album.id}/cover`,
+  }));
+}
+
+export async function listNavidromeAlbumSongs(albumId) {
+  const result = await subsonicGet('getAlbum', { id: albumId });
+  const songs = result.album?.song ?? [];
+  return songs.map(mapNavidromeSong);
 }
 
 export async function navidromeCoverArt(id) {

@@ -79,3 +79,33 @@ export async function uploadToFilebrowser(file, destPath) {
 export async function fetchFilebrowserFile(path) {
   return fbFetch(`/api/raw${path}`);
 }
+
+// Browse (not search) — list one directory's immediate contents.
+export async function listFilebrowserFolder(path) {
+  const normalized = path.startsWith('/') ? path : `/${path}`;
+  const res = await fbFetch(`/api/resources${normalized}`);
+  const body = await res.json();
+  const items = body.items ?? [];
+
+  return items.map((item) => {
+    const itemPath = item.path.startsWith('/') ? item.path : `/${item.path}`;
+    return {
+      name: item.name,
+      isDir: item.isDir,
+      size: item.isDir ? null : item.size ?? null,
+      modified: item.modified ?? null,
+      path: itemPath,
+      url: item.isDir ? null : `/api/media/filebrowser${itemPath}`,
+    };
+  });
+}
+
+// Filebrowser creates a directory (rather than a file) when the resource
+// path ends in a trailing slash.
+export async function createFilebrowserFolder(path) {
+  const withLeadingSlash = path.startsWith('/') ? path : `/${path}`;
+  const withTrailingSlash = withLeadingSlash.endsWith('/')
+    ? withLeadingSlash
+    : `${withLeadingSlash}/`;
+  await fbFetch(`/api/resources${withTrailingSlash}?override=false`, { method: 'POST' });
+}

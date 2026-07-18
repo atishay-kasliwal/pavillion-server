@@ -64,13 +64,36 @@ exposed off-box except `archive-api`, which is what the tunnel points at.
 search), Navidrome (Subsonic `search3`), and Filebrowser, normalizes results
 into one shape, and degrades gracefully if one backend errors.
 
-`POST /api/upload` (multipart, field `file`) — routes by MIME type: images
-and video go to Immich, audio gets dropped into the shared music directory
-and triggers a Navidrome rescan, everything else goes to Filebrowser.
+`POST /api/upload` (multipart, field `file`, optional field `folder` for
+Filebrowser destinations) — routes by MIME type: images and video go to
+Immich, audio gets dropped into the shared music directory and triggers a
+Navidrome rescan, everything else goes to Filebrowser (preserving `folder`
+as a subdirectory if given, created automatically if it doesn't exist yet).
 
 `GET /api/media/:source/...` — proxies thumbnails/originals/streams so the
 frontend only ever talks to this API, never to backend URLs or API keys
 directly.
+
+`GET /api/browse/immich?page=` — timeline (all assets, paginated,
+newest-first-ish per Immich's own ordering), for a gallery view instead of
+requiring a search query.
+
+`GET /api/browse/immich/albums` / `GET /api/browse/immich/albums/:id` —
+list albums, then list the assets inside one.
+
+`GET /api/browse/navidrome/artists` / `.../artists/:id` / `.../albums/:id`
+— library browse: artists → an artist's albums → an album's songs.
+
+`GET /api/browse/filebrowser?path=/some/folder` — list a directory's
+immediate contents (files + subfolders).
+
+`POST /api/browse/filebrowser/folder` (JSON body `{ "path": "..." }`) —
+create a folder ahead of time (uploads also auto-create their destination
+folder if it doesn't exist).
+
+CORS: set `FRONTEND_ORIGIN` (comma-separated) to the frontend's real
+origin once it's deployed — the API reflects any origin until then, which
+is fine for development but should be locked down for production.
 
 See `api/.env.example` for the env vars it needs (all supplied via
 `docker/.env` when run through Compose).

@@ -11,6 +11,14 @@ export const config = {
   musicDir: process.env.MUSIC_DIR ?? '/music',
   cfAccessIdentityHeader:
     process.env.CF_ACCESS_IDENTITY_HEADER ?? 'Cf-Access-Authenticated-User-Email',
+  // Comma-separated list of origins allowed to call this API cross-origin
+  // (the Cloudflare Pages frontend domain, plus localhost for local dev).
+  // Empty means "reflect any origin" — fine while no frontend is deployed
+  // yet, but should be locked down once FRONTEND_ORIGIN is known.
+  frontendOrigins: (process.env.FRONTEND_ORIGIN ?? '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean),
 
   immich: {
     baseUrl: required('IMMICH_BASE_URL', 'http://localhost:2283'),
