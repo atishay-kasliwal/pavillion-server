@@ -5,6 +5,7 @@ import { searchRouter } from './routes/search.js';
 import { uploadRouter } from './routes/upload.js';
 import { mediaRouter } from './routes/media.js';
 import { browseRouter } from './routes/browse.js';
+import { manageRouter } from './routes/manage.js';
 
 const app = express();
 
@@ -37,6 +38,7 @@ app.use('/api', searchRouter);
 app.use('/api', uploadRouter);
 app.use('/api', mediaRouter);
 app.use('/api', browseRouter);
+app.use('/api', manageRouter);
 
 app.use((err, _req, res, _next) => {
   console.error(err);

@@ -84,10 +84,55 @@ export async function listImmichAlbums() {
   }));
 }
 
+// GET /api/albums/:id does NOT embed its assets in this Immich version
+// (confirmed live — no `assets` field at all in the response, despite
+// `assetCount` being accurate) — listing an album's contents means a
+// metadata search scoped to it instead.
 export async function listImmichAlbumAssets(albumId) {
-  const res = await immichFetch(`/api/albums/${albumId}`);
-  const album = await res.json();
-  return (album?.assets ?? []).map(mapImmichAsset);
+  const res = await immichFetch('/api/search/metadata', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ albumId }),
+  });
+  const body = await res.json();
+  return (body?.assets?.items ?? []).map(mapImmichAsset);
+}
+
+// `permanent: false` (default) moves to trash, matching Immich's own UI
+// behavior — recoverable for 30 days rather than gone immediately.
+export async function deleteImmichAsset(assetId, permanent = false) {
+  await immichFetch('/api/assets', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids: [assetId], force: permanent }),
+  });
+}
+
+// Albums are Immich's actual organizational primitive — there's no
+// filename/rename concept for assets, so "organize" means album membership.
+export async function createImmichAlbum(name, assetIds = []) {
+  const res = await immichFetch('/api/albums', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ albumName: name, assetIds }),
+  });
+  return res.json();
+}
+
+export async function addImmichAlbumAssets(albumId, assetIds) {
+  await immichFetch(`/api/albums/${albumId}/assets`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids: assetIds }),
+  });
+}
+
+export async function removeImmichAlbumAssets(albumId, assetIds) {
+  await immichFetch(`/api/albums/${albumId}/assets`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids: assetIds }),
+  });
 }
 
 export async function uploadToImmich(file) {

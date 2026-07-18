@@ -109,3 +109,18 @@ export async function createFilebrowserFolder(path) {
     : `${withLeadingSlash}/`;
   await fbFetch(`/api/resources${withTrailingSlash}?override=false`, { method: 'POST' });
 }
+
+export async function deleteFilebrowserPath(path) {
+  const normalized = path.startsWith('/') ? path : `/${path}`;
+  await fbFetch(`/api/resources${normalized}`, { method: 'DELETE' });
+}
+
+// Filebrowser's rename/move is the same operation (its own UI doesn't
+// distinguish them) — `destination` is the full new path, not just a name.
+export async function renameFilebrowserPath(fromPath, toPath) {
+  const from = fromPath.startsWith('/') ? fromPath : `/${fromPath}`;
+  const to = toPath.startsWith('/') ? toPath : `/${toPath}`;
+  await fbFetch(`/api/resources${from}?action=rename&destination=${encodeURIComponent(to)}&override=false`, {
+    method: 'PATCH',
+  });
+}

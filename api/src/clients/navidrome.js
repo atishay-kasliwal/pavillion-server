@@ -34,6 +34,41 @@ async function subsonicGet(endpoint, extraParams = {}) {
   return inner;
 }
 
+// Navidrome's own native API (separate from the Subsonic compatibility
+// layer above) uses JWT auth via /auth/login. Needed for getNavidromeSongPath
+// below — the Subsonic API's `path` field is a virtualized Artist/Album/Title
+// display path, not the real file location; the native API's is the real one.
+let nativeTokenCache = null;
+
+async function nativeLogin() {
+  const res = await fetch(`${baseUrl}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password }),
+  });
+  if (!res.ok) {
+    throw new Error(`Navidrome native login -> ${res.status}`);
+  }
+  const body = await res.json();
+  nativeTokenCache = body.token;
+  return nativeTokenCache;
+}
+
+async function nativeFetch(path, retried = false) {
+  const token = nativeTokenCache ?? (await nativeLogin());
+  const res = await fetch(`${baseUrl}${path}`, {
+    headers: { 'x-nd-authorization': `Bearer ${token}` },
+  });
+  if (res.status === 401 && !retried) {
+    nativeTokenCache = null;
+    return nativeFetch(path, true);
+  }
+  if (!res.ok) {
+    throw new Error(`Navidrome native GET ${path} -> ${res.status}`);
+  }
+  return res.json();
+}
+
 function mapNavidromeSong(song) {
   return {
     source: 'navidrome',
@@ -89,6 +124,20 @@ export async function listNavidromeAlbumSongs(albumId) {
   const result = await subsonicGet('getAlbum', { id: albumId });
   const songs = result.album?.song ?? [];
   return songs.map(mapNavidromeSong);
+}
+
+// Returns the file's real path relative to the music root — needed
+// because delete/rename have no Subsonic write API and have to happen as
+// direct filesystem operations (see routes/manage.js). Deliberately uses
+// the native API, not Subsonic's getSong: Subsonic's `path` is a
+// virtualized "Artist/Album/Title" display path that does NOT match the
+// real file location for untagged/mistagged files (confirmed live —
+// Subsonic reported "[Unknown Artist]/[Unknown Album]/x.wav" for a file
+// that actually sits flat at the music root).
+export async function getNavidromeSongPath(id) {
+  const song = await nativeFetch(`/api/song/${id}`);
+  if (!song?.path) throw new Error(`Navidrome song ${id} not found`);
+  return song.path;
 }
 
 export async function navidromeCoverArt(id) {

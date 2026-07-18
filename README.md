@@ -95,6 +95,37 @@ CORS: set `FRONTEND_ORIGIN` (comma-separated) to the frontend's real
 origin once it's deployed — the API reflects any origin until then, which
 is fine for development but should be locked down for production.
 
+### Delete / rename / organize
+
+`DELETE /api/immich/:id` (optional `?permanent=true`, default moves to
+Immich's trash) — Immich assets have no renameable filename, so there's
+no rename route for them; organizing means albums instead:
+
+- `POST /api/immich/albums` (JSON `{ name, assetIds? }`) — create an album
+- `PUT /api/immich/albums/:id/assets` (JSON `{ assetIds }`) — add assets
+- `DELETE /api/immich/albums/:id/assets` (JSON `{ assetIds }`) — remove assets
+
+`DELETE /api/navidrome/:id` / `PATCH /api/navidrome/:id` (JSON `{ path }`)
+— Navidrome/Subsonic has no write API at all, so these resolve the song's
+real path on disk (via Navidrome's native `/api/song/:id` — **not**
+Subsonic's `getSong`, whose `path` field is a virtualized
+"Artist/Album/Title" display path that doesn't match the real file
+location for untagged/mistagged audio, confirmed live) and delete/move
+the file directly in the shared music folder, then trigger a rescan so
+Navidrome's index catches up — the same trick `/api/upload` already uses.
+**After a successful rename, the old song ID is stale** — the rescan
+assigns the moved file a new ID, so re-fetch (e.g. via `/api/browse/navidrome/...`)
+before doing anything else with that song.
+
+`DELETE /api/filebrowser/*` / `PATCH /api/filebrowser/*` (JSON
+`{ destination }`) — native Filebrowser delete/rename/move.
+
+Note: `GET /api/browse/immich/albums/:id` (and Immich browsing generally)
+is backed by Immich's search index, not a direct DB read — observed a
+brief lag between an album add/remove succeeding (204) and it showing up
+in a browse call right after. Don't assume the browse result is
+instantaneous truth immediately following a write.
+
 See `api/.env.example` for the env vars it needs (all supplied via
 `docker/.env` when run through Compose).
 
