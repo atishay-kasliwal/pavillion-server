@@ -13,6 +13,12 @@ name: pavillion
 # single piece. It's behind the `ml` profile so it's opt-in:
 #   docker compose --profile ml up -d     # with ML features
 #   docker compose up -d                  # without them, if memory is tight
+#
+# Storage layout (see PLAN.md — two physical disks):
+# - ${FAST_LOCATION} (NVMe SSD, /mnt/fast) — Postgres data + ML model cache,
+#   the random-I/O-heavy pieces.
+# - ${UPLOAD_LOCATION} / ${MUSIC_LOCATION} / ${FILEBROWSER_ROOT} (HDD,
+#   /mnt/data) — bulk media, capacity over speed.
 
 services:
   immich-server:
@@ -41,7 +47,7 @@ services:
     container_name: immich_machine_learning
     image: ghcr.io/immich-app/immich-machine-learning:${IMMICH_VERSION:-release}
     volumes:
-      - model-cache:/cache
+      - ${FAST_LOCATION}/model-cache:/cache
     env_file:
       - .env
     restart: unless-stopped
@@ -72,7 +78,7 @@ services:
       POSTGRES_PASSWORD: ${IMMICH_DB_PASSWORD}
       POSTGRES_DB: immich
     volumes:
-      - immich-pgdata:/var/lib/postgresql/data
+      - ${FAST_LOCATION}/immich-pgdata:/var/lib/postgresql/data
     restart: unless-stopped
     mem_limit: 600m
 
@@ -125,7 +131,3 @@ services:
       - filebrowser
     restart: unless-stopped
     mem_limit: 150m
-
-volumes:
-  immich-pgdata:
-  model-cache:
