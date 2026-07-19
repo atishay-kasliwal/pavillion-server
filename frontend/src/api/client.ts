@@ -20,18 +20,39 @@ export class SessionExpiredError extends Error {
   }
 }
 
-type SessionListener = () => void
-let sessionListeners: SessionListener[] = []
+// App-level login (see routes/auth.js on the server) — a second layer
+// behind Cloudflare Access. Distinct from SessionExpiredError, which is
+// specifically about the Access session; this is our own /api/auth cookie.
+export class AuthRequiredError extends Error {
+  constructor() {
+    super('Not logged in')
+  }
+}
 
-export function onSessionExpired(fn: SessionListener): () => void {
+type Listener = () => void
+let sessionListeners: Listener[] = []
+let authListeners: Listener[] = []
+
+export function onSessionExpired(fn: Listener): () => void {
   sessionListeners.push(fn)
   return () => {
     sessionListeners = sessionListeners.filter((l) => l !== fn)
   }
 }
 
+export function onAuthRequired(fn: Listener): () => void {
+  authListeners.push(fn)
+  return () => {
+    authListeners = authListeners.filter((l) => l !== fn)
+  }
+}
+
 function notifySessionExpired() {
   for (const fn of sessionListeners) fn()
+}
+
+function notifyAuthRequired() {
+  for (const fn of authListeners) fn()
 }
 
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -53,6 +74,14 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   if (res.status === 204) return undefined as T
+
+  // Login's own 401 (wrong password) is handled inline by the login form,
+  // not treated as "you got logged out" — everything else that comes back
+  // 401 means the app-level session cookie is missing/expired.
+  if (res.status === 401 && path !== '/api/auth/login') {
+    notifyAuthRequired()
+    throw new AuthRequiredError()
+  }
 
   if (!res.ok) {
     let message = `request failed (${res.status})`

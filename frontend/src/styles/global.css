@@ -159,6 +159,12 @@ a:focus-visible,
   gap: 14px;
 }
 
+.topbar-icon {
+  width: 18px;
+  height: 18px;
+  color: var(--text-muted);
+}
+
 .storage-pill {
   font-size: 0.72rem;
   font-family: var(--font-mono);
@@ -1133,6 +1139,33 @@ a:focus-visible,
   color: var(--text-dim);
   margin: 0;
   max-width: 360px;
+}
+
+/* ---------- App login gate ---------- */
+
+.login-gate {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.login-form {
+  width: 100%;
+  max-width: 320px;
+  padding: 0 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.login-form h1 {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  color: var(--text-strong);
+  text-align: center;
+  margin: 0 0 10px;
 }
 
 /* ---------- Search ---------- */

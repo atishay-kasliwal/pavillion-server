@@ -109,3 +109,11 @@ export function useSearch(q: string) {
     enabled: q.trim().length > 0,
   })
 }
+
+export function useAuthStatus() {
+  return useQuery({
+    queryKey: ['authStatus'],
+    queryFn: api.authStatus,
+    retry: false,
+  })
+}

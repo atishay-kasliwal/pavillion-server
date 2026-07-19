@@ -149,3 +149,12 @@ export function IconCalendar({ className }: IconProps) {
     </svg>
   )
 }
+
+export function IconLogout({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M14 8V6a1.5 1.5 0 0 0-1.5-1.5h-6A1.5 1.5 0 0 0 5 6v12a1.5 1.5 0 0 0 1.5 1.5h6A1.5 1.5 0 0 0 14 18v-2" />
+      <path d="M9 12h11M17 8.5l3.5 3.5-3.5 3.5" />
+    </svg>
+  )
+}

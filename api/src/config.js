@@ -34,4 +34,14 @@ export const config = {
     username: required('FILEBROWSER_USERNAME', ''),
     password: required('FILEBROWSER_PASSWORD', ''),
   },
+
+  // App-level login (see routes/auth.js) — a second layer behind Cloudflare
+  // Access, not a replacement for it. passwordHash is `salt:hash` hex from
+  // scripts/hash-password.js. Left blank means login can never succeed
+  // (fails closed) rather than silently accepting any password.
+  auth: {
+    username: process.env.APP_LOGIN_USERNAME ?? '',
+    passwordHash: process.env.APP_LOGIN_PASSWORD_HASH ?? '',
+    sessionSecret: process.env.SESSION_SECRET ?? '',
+  },
 };

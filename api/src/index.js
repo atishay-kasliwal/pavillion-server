@@ -10,6 +10,8 @@ import { mediaRouter } from './routes/media.js';
 import { browseRouter } from './routes/browse.js';
 import { manageRouter } from './routes/manage.js';
 import { systemRouter } from './routes/system.js';
+import { authRouter } from './routes/auth.js';
+import { SESSION_COOKIE, getCookie, verifySessionCookieValue } from './lib/auth.js';
 
 const app = express();
 
@@ -34,6 +36,19 @@ app.use((req, _res, next) => {
 });
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
+
+// Auth routes are public (login needs to be reachable while logged out);
+// everything else under /api requires a valid app-level session — a second
+// layer behind Cloudflare Access, not a replacement for it (see lib/auth.js).
+app.use('/api', authRouter);
+app.use('/api', (req, res, next) => {
+  const authenticated = verifySessionCookieValue(
+    getCookie(req, SESSION_COOKIE),
+    config.auth.sessionSecret,
+  );
+  if (!authenticated) return res.status(401).json({ error: 'authentication required' });
+  next();
+});
 
 app.use('/api', searchRouter);
 app.use('/api', uploadRouter);

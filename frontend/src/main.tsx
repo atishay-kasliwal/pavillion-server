@@ -1,10 +1,11 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { MutationCache, QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { SessionExpiredError } from './api/client'
+import { AuthRequiredError, SessionExpiredError } from './api/client'
 import { pushToast } from './lib/toast'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { PlayerProvider } from './player/PlayerContext'
+import { AuthGate } from './components/AuthGate'
 import { App } from './App'
 import { GalleryPage } from './routes/GalleryPage'
 import { AlbumsPage } from './routes/AlbumsPage'
@@ -23,10 +24,10 @@ const queryClient = new QueryClient({
   },
   // Global safety net: any mutation (delete, rename, move, folder create, …)
   // that fails now always surfaces something, instead of failing silently.
-  // The session-expired case is handled by SessionExpiredGate instead.
+  // The session-expired/auth-required cases are handled by their own gates.
   mutationCache: new MutationCache({
     onError: (error) => {
-      if (error instanceof SessionExpiredError) return
+      if (error instanceof SessionExpiredError || error instanceof AuthRequiredError) return
       pushToast(error instanceof Error ? error.message : 'Something went wrong', 'error')
     },
   }),
@@ -53,9 +54,11 @@ const router = createBrowserRouter([
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <PlayerProvider>
-        <RouterProvider router={router} />
-      </PlayerProvider>
+      <AuthGate>
+        <PlayerProvider>
+          <RouterProvider router={router} />
+        </PlayerProvider>
+      </AuthGate>
     </QueryClientProvider>
   </StrictMode>,
 )

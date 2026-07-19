@@ -150,3 +150,13 @@ export function useMoveFile() {
     },
   })
 }
+
+export function useLogout() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => api.logout(),
+    onSuccess: () => {
+      qc.setQueryData(['authStatus'], { authenticated: false })
+    },
+  })
+}

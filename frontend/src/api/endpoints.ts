@@ -108,3 +108,11 @@ export const moveFile = (path: string, destination: string) =>
   )
 
 export const systemStorage = () => request<SystemStorage>('/api/system/storage')
+
+// App-level login
+export const authStatus = () => request<{ authenticated: boolean }>('/api/auth/status')
+
+export const login = (username: string, password: string) =>
+  request<{ ok: true }>('/api/auth/login', json('POST', { username, password }))
+
+export const logout = () => request<void>('/api/auth/logout', { method: 'POST' })

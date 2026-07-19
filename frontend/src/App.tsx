@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { useHealth, useSystemStorage } from './hooks/queries'
+import { useLogout } from './hooks/mutations'
 import { formatBytes } from './lib/format'
 import { MiniPlayer } from './player/MiniPlayer'
 import { SessionExpiredGate } from './components/SessionExpiredGate'
@@ -7,6 +8,7 @@ import { ToastStack } from './components/ToastStack'
 import {
   IconAlbums,
   IconFolder,
+  IconLogout,
   IconMusic,
   IconPhoto,
   IconSearch,
@@ -25,6 +27,7 @@ const NAV = [
 export function App() {
   const health = useHealth()
   const storage = useSystemStorage()
+  const logout = useLogout()
   const status = health.isSuccess ? 'ok' : health.isError ? 'err' : ''
 
   return (
@@ -42,6 +45,14 @@ export function App() {
             <span className={`status-dot ${status}`} />
             {health.isSuccess ? 'Connected' : health.isError ? 'Offline' : 'Checking…'}
           </div>
+          <button
+            className="row-action"
+            title="Sign out"
+            onClick={() => logout.mutate()}
+            disabled={logout.isPending}
+          >
+            <IconLogout className="topbar-icon" />
+          </button>
         </div>
       </header>
 
