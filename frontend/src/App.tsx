@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom'
-import { useHealth } from './hooks/queries'
+import { useHealth, useSystemStorage } from './hooks/queries'
+import { formatBytes } from './lib/format'
 import { MiniPlayer } from './player/MiniPlayer'
 import { SessionExpiredGate } from './components/SessionExpiredGate'
 import { ToastStack } from './components/ToastStack'
@@ -23,15 +24,24 @@ const NAV = [
 
 export function App() {
   const health = useHealth()
+  const storage = useSystemStorage()
   const status = health.isSuccess ? 'ok' : health.isError ? 'err' : ''
 
   return (
     <div className="shell">
       <header className="topbar">
         <div className="brand">Pavillion</div>
-        <div className="status-pill">
-          <span className={`status-dot ${status}`} />
-          {health.isSuccess ? 'Connected' : health.isError ? 'Offline' : 'Checking…'}
+        <div className="topbar-right">
+          {storage.data ? (
+            <span className="storage-pill">
+              {formatBytes(storage.data.freeBytes)} free of{' '}
+              {formatBytes(storage.data.totalBytes)}
+            </span>
+          ) : null}
+          <div className="status-pill">
+            <span className={`status-dot ${status}`} />
+            {health.isSuccess ? 'Connected' : health.isError ? 'Offline' : 'Checking…'}
+          </div>
         </div>
       </header>
 

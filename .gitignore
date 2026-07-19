@@ -6,3 +6,6 @@ docker/.env
 # wrangler
 worker/.wrangler/
 worker/node_modules/
+
+# Claude Code local tool state — not app source
+.claude/

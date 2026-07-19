@@ -7,13 +7,14 @@ type Props = {
   entry: FbEntry
   download: string | null
   onOpen: () => void
+  onRename: () => void
   onMove: () => void
   onDelete: () => void
 }
 
 // A folder's size column recomputes recursively on demand, mirroring
 // Finder's own "Calculating size…" behavior for directories.
-export function FileRow({ entry, download, onOpen, onMove, onDelete }: Props) {
+export function FileRow({ entry, download, onOpen, onRename, onMove, onDelete }: Props) {
   const stats = useRecursiveStats(entry.path, entry.isDir)
 
   const sizeLabel = entry.isDir
@@ -43,6 +44,9 @@ export function FileRow({ entry, download, onOpen, onMove, onDelete }: Props) {
             Download
           </a>
         ) : null}
+        <button className="row-action" onClick={onRename}>
+          Rename
+        </button>
         <button className="row-action" onClick={onMove}>
           Move
         </button>

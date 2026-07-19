@@ -53,6 +53,14 @@ body,
   height: 100%;
 }
 
+/* Safety net — nothing in this layout should ever need horizontal page
+   scroll; if some descendant briefly overflows, clip rather than push
+   fixed/sticky chrome like the topbar buttons off-screen. */
+html,
+body {
+  overflow-x: hidden;
+}
+
 body {
   margin: 0;
   background: var(--bg);
@@ -143,6 +151,18 @@ a:focus-visible,
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.storage-pill {
+  font-size: 0.72rem;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
 }
 
 .status-pill {
@@ -591,6 +611,18 @@ a:focus-visible,
   gap: 14px;
   margin-bottom: 18px;
 }
+.info-link {
+  margin: -6px -8px 12px;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  transition: background 0.15s var(--ease);
+}
+.info-link:hover {
+  background: var(--surface-hover);
+}
+.info-link .info-sub {
+  color: var(--accent-soft);
+}
 .info-icon {
   width: 18px;
   height: 18px;
@@ -821,6 +853,27 @@ a:focus-visible,
 .files-main {
   flex: 1;
   min-width: 0;
+  border-radius: var(--radius);
+  transition: background 0.15s var(--ease), box-shadow 0.15s var(--ease);
+}
+.files-main.drag-over {
+  background: var(--accent-glow);
+  box-shadow: inset 0 0 0 2px var(--accent-soft);
+}
+.files-drop-hint {
+  text-align: center;
+  padding: 10px;
+  margin-bottom: 12px;
+  border-radius: var(--radius-sm);
+  border: 1.5px dashed var(--accent-soft);
+  color: var(--accent-soft);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.files-drop-hint.uploading {
+  border-style: solid;
+  border-color: var(--border);
+  color: var(--text-dim);
 }
 
 .folder-tree {

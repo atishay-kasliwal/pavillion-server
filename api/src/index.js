@@ -9,6 +9,7 @@ import { uploadRouter } from './routes/upload.js';
 import { mediaRouter } from './routes/media.js';
 import { browseRouter } from './routes/browse.js';
 import { manageRouter } from './routes/manage.js';
+import { systemRouter } from './routes/system.js';
 
 const app = express();
 
@@ -39,6 +40,7 @@ app.use('/api', uploadRouter);
 app.use('/api', mediaRouter);
 app.use('/api', browseRouter);
 app.use('/api', manageRouter);
+app.use('/api', systemRouter);
 
 // Serve the built SPA (frontend/ builds into api/public) same-origin, so
 // one hostname and one Access session cover both UI and API. Hashed

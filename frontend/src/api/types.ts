@@ -12,6 +12,11 @@ export type Item = {
   size: number | null // bytes
   thumbnailUrl: string | null // relative — prefix with API origin
   url: string // relative — full-quality/download/stream URL
+  // GPS EXIF, Immich assets only (from the photo's capture metadata) —
+  // absent/null for navidrome and filebrowser items, and for photos with
+  // no location data at capture time. Read-only, not user-editable.
+  latitude?: number | null
+  longitude?: number | null
 }
 
 export type SearchResponse = {
@@ -68,4 +73,10 @@ export type FolderListing = {
 export type UploadResult = {
   destination: Source
   [key: string]: unknown
+}
+
+export type SystemStorage = {
+  totalBytes: number
+  freeBytes: number
+  usedBytes: number
 }

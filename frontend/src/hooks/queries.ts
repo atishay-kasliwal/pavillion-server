@@ -13,6 +13,15 @@ export function useHealth() {
   })
 }
 
+export function useSystemStorage() {
+  return useQuery({
+    queryKey: ['systemStorage'],
+    queryFn: api.systemStorage,
+    staleTime: 60_000,
+    refetchInterval: 5 * 60_000,
+  })
+}
+
 export function useTimeline() {
   return useInfiniteQuery({
     queryKey: ['timeline'],

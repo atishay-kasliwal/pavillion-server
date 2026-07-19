@@ -26,6 +26,8 @@ function mapImmichAsset(asset) {
     size: asset.exifInfo?.fileSizeInByte ?? null,
     thumbnailUrl: `/api/media/immich/${asset.id}/thumbnail`,
     url: `/api/media/immich/${asset.id}/original`,
+    latitude: asset.exifInfo?.latitude ?? null,
+    longitude: asset.exifInfo?.longitude ?? null,
   };
 }
 

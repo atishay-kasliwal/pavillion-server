@@ -123,10 +123,27 @@ export function Lightbox({ items, index, onNavigate, onClose, actions }: Props) 
               <div className="info-label">{formatBytes(item.size)}</div>
             </div>
           ) : null}
-          <div className="info-row">
-            <IconMapPin className="info-icon" />
-            <div className="info-muted">Location not available</div>
-          </div>
+          {item.latitude != null && item.longitude != null ? (
+            <a
+              className="info-row info-link"
+              href={`https://www.openstreetmap.org/?mlat=${item.latitude}&mlon=${item.longitude}#map=15/${item.latitude}/${item.longitude}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <IconMapPin className="info-icon" />
+              <div>
+                <div className="info-label">
+                  {item.latitude.toFixed(4)}, {item.longitude.toFixed(4)}
+                </div>
+                <div className="info-sub">Open in Maps</div>
+              </div>
+            </a>
+          ) : (
+            <div className="info-row">
+              <IconMapPin className="info-icon" />
+              <div className="info-muted">Location not available</div>
+            </div>
+          )}
         </div>
       ) : null}
     </div>

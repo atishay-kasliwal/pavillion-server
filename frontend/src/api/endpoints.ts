@@ -7,6 +7,7 @@ import type {
   FolderListing,
   ImmichAlbum,
   SearchResponse,
+  SystemStorage,
   TimelinePage,
   UploadResult,
 } from './types'
@@ -105,3 +106,5 @@ export const moveFile = (path: string, destination: string) =>
     `/api/filebrowser/${fbPath(path)}`,
     json('PATCH', { destination }),
   )
+
+export const systemStorage = () => request<SystemStorage>('/api/system/storage')
