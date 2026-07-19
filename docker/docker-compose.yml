@@ -35,6 +35,17 @@ services:
       DB_PASSWORD: ${IMMICH_DB_PASSWORD}
       DB_DATABASE_NAME: immich
       REDIS_HOSTNAME: immich-redis
+      # Cap background job concurrency so a large upload batch doesn't spawn a
+      # swarm of ffmpeg thumbnail/transcode processes at once — that swarm was
+      # blowing past this container's memory ceiling and getting its ffmpeg
+      # children SIGKILLed by the kernel OOM-killer (OOMKilled=false on the
+      # container itself, since it's the child that dies), which made Immich
+      # thrash and time out. The API then saw ECONNREFUSED/HeadersTimeout and
+      # returned 500 on every queued upload. Two at a time keeps it stable.
+      IMMICH_MACHINE_LEARNING_ENABLED: 'false'
+      JOB_THUMBNAIL_GENERATION_CONCURRENCY: '2'
+      JOB_VIDEO_TRANSCODING_CONCURRENCY: '1'
+      JOB_METADATA_EXTRACTION_CONCURRENCY: '3'
     ports:
       - '127.0.0.1:2283:2283'
       # Also bound to the Tailscale IP so the official Immich mobile app can
@@ -47,7 +58,11 @@ services:
       - immich-redis
       - immich-database
     restart: unless-stopped
-    mem_limit: 1200m
+    # Raised from 1200m: video thumbnail generation runs ffmpeg, which is
+    # memory-hungry, and 1200m left no room once a batch queued several at
+    # once. The host has ~5.7 GB and ML is opt-in (off here), so 2 GB is
+    # affordable and stops the OOM-kill/thrash cycle above.
+    mem_limit: 2g
 
   immich-machine-learning:
     container_name: immich_machine_learning
