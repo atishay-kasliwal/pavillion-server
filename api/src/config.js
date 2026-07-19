@@ -9,6 +9,11 @@ function required(name, fallback) {
 export const config = {
   port: Number(process.env.PORT ?? 8090),
   musicDir: process.env.MUSIC_DIR ?? '/music',
+  // Google Photos Takeout import (see routes/takeout.js): each account gets
+  // a subfolder of takeoutDir to drop zip exports into, and a matching
+  // subfolder of photosDir that the import script writes into.
+  takeoutDir: process.env.TAKEOUT_DIR ?? '/takeout',
+  photosDir: process.env.PHOTOS_DIR ?? '/photos',
   cfAccessIdentityHeader:
     process.env.CF_ACCESS_IDENTITY_HEADER ?? 'Cf-Access-Authenticated-User-Email',
   // Comma-separated list of origins allowed to call this API cross-origin

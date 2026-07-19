@@ -1,5 +1,14 @@
 # Frontend — build spec
 
+> **Superseded (2026-07-18):** the frontend is built in `frontend/` in this repo and
+> is served **same-origin by archive-api itself** (Vite builds into `api/public`,
+> Express serves it with an SPA fallback). Section 1's Cloudflare Pages / second
+> hostname / CORS setup no longer applies — one hostname
+> (`archive.atishaykasliwal.com`), one Access app, no `FRONTEND_ORIGIN` needed.
+> Deploy = `npm run build` in `frontend/`, commit `api/public`, `git pull` +
+> `docker compose up -d --build archive-api` on the server. The API contract in
+> sections 2–5 remains authoritative. See `frontend/README.md`.
+
 Everything needed to build the Pavillion archive frontend on a separate computer and
 deploy it to Cloudflare Pages, against the `archive-api` backend that already runs on
 the server. See `PLAN.md` for the overall project rationale; this file is just the

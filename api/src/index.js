@@ -1,21 +1,25 @@
 import express from 'express';
 import cors from 'cors';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { config } from './config.js';
 import { searchRouter } from './routes/search.js';
 import { uploadRouter } from './routes/upload.js';
 import { mediaRouter } from './routes/media.js';
 import { browseRouter } from './routes/browse.js';
 import { manageRouter } from './routes/manage.js';
+import { takeoutRouter } from './routes/takeout.js';
+import { ensureRootDirsExist } from './clients/takeout.js';
+
+ensureRootDirsExist();
 
 const app = express();
 
-// The frontend is deployed on a different origin (Cloudflare Pages), so
-// the browser enforces CORS on every call here. Cloudflare Access already
-// authenticates the request before it reaches this box (see below), so
-// this is just what makes cross-origin fetch() calls possible at all —
-// not a second auth layer. Empty FRONTEND_ORIGIN (no frontend deployed
-// yet) reflects any origin; set it once the frontend's real origin is
-// known to lock this down.
+// The frontend is served same-origin from this process (see the static
+// block below), so CORS normally never comes into play. It's kept for
+// any cross-origin dev setup; Cloudflare Access already authenticates
+// every request before it reaches this box, so this is not an auth layer.
 app.use(
   cors({
     origin: config.frontendOrigins.length > 0 ? config.frontendOrigins : true,
@@ -39,6 +43,30 @@ app.use('/api', uploadRouter);
 app.use('/api', mediaRouter);
 app.use('/api', browseRouter);
 app.use('/api', manageRouter);
+app.use('/api', takeoutRouter);
+
+// Serve the built SPA (frontend/ builds into api/public) same-origin, so
+// one hostname and one Access session cover both UI and API. Hashed
+// assets cache forever; index.html never, so deploys take effect on reload.
+const publicDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../public');
+if (fs.existsSync(path.join(publicDir, 'index.html'))) {
+  app.use(
+    express.static(publicDir, {
+      setHeaders(res, filePath) {
+        if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        } else {
+          res.setHeader('Cache-Control', 'no-cache');
+        }
+      },
+    }),
+  );
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) return next();
+    res.setHeader('Cache-Control', 'no-cache');
+    res.sendFile(path.join(publicDir, 'index.html'));
+  });
+}
 
 app.use((err, _req, res, _next) => {
   console.error(err);
