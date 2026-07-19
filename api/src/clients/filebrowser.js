@@ -1,3 +1,4 @@
+import { openAsBlob } from 'node:fs';
 import { config } from '../config.js';
 
 const { baseUrl, username, password } = config.filebrowser;
@@ -69,10 +70,14 @@ export async function searchFilebrowser(query) {
 }
 
 export async function uploadToFilebrowser(file, destPath) {
+  // Stream the spooled temp file straight through rather than reading it into
+  // a buffer first — same memory-safety reasoning as the Immich upload path.
+  const blob = await openAsBlob(file.path, { type: 'application/octet-stream' });
   await fbFetch(`/api/resources${destPath}?override=false`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/octet-stream' },
-    body: file.buffer,
+    body: blob,
+    duplex: 'half',
   });
 }
 

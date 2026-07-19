@@ -1,3 +1,4 @@
+import { openAsBlob } from 'node:fs';
 import { config } from '../config.js';
 
 const { baseUrl, apiKey } = config.immich;
@@ -154,7 +155,11 @@ export async function removeImmichAlbumAssets(albumId, assetIds) {
 
 export async function uploadToImmich(file) {
   const form = new FormData();
-  const blob = new Blob([file.buffer], { type: file.mimetype });
+  // openAsBlob returns a Blob backed by the spooled temp file on disk, read
+  // lazily as undici streams the multipart body — so a large video is never
+  // pulled fully into memory (which used to OOM-kill this container on files
+  // in the ~100 MB range; see routes/upload.js).
+  const blob = await openAsBlob(file.path, { type: file.mimetype });
   form.append('assetData', blob, file.originalname);
   form.append('deviceAssetId', `pavillion-api-${Date.now()}-${file.originalname}`);
   form.append('deviceId', 'pavillion-archive-api');

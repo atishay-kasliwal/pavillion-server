@@ -141,4 +141,11 @@ services:
       - navidrome
       - filebrowser
     restart: unless-stopped
-    mem_limit: 150m
+    # Uploads spool to a temp file and stream on to the backend (see
+    # api/src/routes/upload.js) rather than being double-buffered in memory.
+    # Even so, undici buffers the outbound multipart body while sending, so a
+    # worst-case upload at the 200 MB cap transiently needs ~500 MB RSS
+    # (measured). The old 150m was OOM-killed mid-upload by any ~100 MB video
+    # — hence the crash. 768m covers the full cap with headroom; the box has
+    # ~6 GB and immich-machine-learning is opt-in, so this is affordable.
+    mem_limit: 768m

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import path from 'node:path';
+import os from 'node:os';
 import fs from 'node:fs/promises';
 import { config } from '../config.js';
 import { uploadToImmich } from '../clients/immich.js';
@@ -9,10 +10,16 @@ import { uploadToFilebrowser, createFilebrowserFolder } from '../clients/filebro
 
 export const uploadRouter = Router();
 
-// Keep the API stateless/light: files are buffered in memory rather than
-// spooled to disk, and the 200 MB cap keeps a single upload from pressuring
-// the ~6 GB RAM budget (see PLAN.md "Known Risks").
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 200 * 1024 * 1024 } });
+// Files are spooled to a temp file on disk rather than buffered in memory,
+// then streamed on to the backend (Immich/Filebrowser) — a 100+ MB video no
+// longer needs to fit, twice over, inside the container's tight memory limit
+// (archive-api is capped at ~256 MB; see docker-compose.yml). The 200 MB cap
+// still bounds a single upload (see PLAN.md "Known Risks"). The temp file is
+// always removed once the request settles (see the finally block below).
+const upload = multer({
+  storage: multer.diskStorage({ destination: os.tmpdir() }),
+  limits: { fileSize: 200 * 1024 * 1024 },
+});
 
 function classify(mimetype) {
   if (mimetype.startsWith('image/') || mimetype.startsWith('video/')) return 'immich';
@@ -41,10 +48,13 @@ uploadRouter.post('/upload', upload.single('file'), async (req, res, next) => {
     if (destination === 'navidrome') {
       // Navidrome has no upload API — the "upload" is dropping the file
       // into the library folder it scans, then nudging it to rescan now
-      // instead of waiting for ND_SCANSCHEDULE.
+      // instead of waiting for ND_SCANSCHEDULE. The spooled temp file may be
+      // on a different filesystem than the music dir, so a plain rename can
+      // fail with EXDEV — copy (which crosses devices) and let the finally
+      // block below remove the temp original.
       const safeName = path.basename(req.file.originalname);
       const target = path.join(config.musicDir, safeName);
-      await fs.writeFile(target, req.file.buffer, { flag: 'wx' });
+      await fs.copyFile(req.file.path, target, fs.constants.COPYFILE_EXCL);
       await triggerNavidromeScan();
       return res.status(201).json({ destination, path: target });
     }
@@ -71,5 +81,11 @@ uploadRouter.post('/upload', upload.single('file'), async (req, res, next) => {
       return res.status(409).json({ error: 'a file with that name already exists' });
     }
     next(err);
+  } finally {
+    // Always drop the spooled temp file, whether the upload succeeded, was a
+    // duplicate, or threw — otherwise os.tmpdir() slowly fills up.
+    if (req.file?.path) {
+      await fs.rm(req.file.path, { force: true }).catch(() => {});
+    }
   }
 });
