@@ -6,6 +6,23 @@
 
 export const API_ORIGIN: string = import.meta.env.VITE_API_ORIGIN ?? ''
 
+// Cloudflare's Free/Pro plans reject request bodies over 100 MB with a 413
+// before the request ever reaches the tunnel/API. Anything larger has to take
+// a path that skips Cloudflare — the direct-upload origin below.
+export const CLOUDFLARE_BODY_LIMIT = 100 * 1024 * 1024
+
+// An HTTPS origin that reaches the API *without* going through Cloudflare —
+// e.g. the box's Tailscale MagicDNS name (`tailscale serve` over the tailnet).
+// Used only for uploads larger than the Cloudflare limit; empty means no
+// bypass is configured, so oversized files fail with a clear message.
+export const DIRECT_UPLOAD_ORIGIN: string = import.meta.env.VITE_DIRECT_UPLOAD_ORIGIN ?? ''
+
+// Sent as X-Upload-Key on direct uploads — the API accepts it in place of the
+// session cookie, which can't cross to the ts.net domain (see api/src/index.js).
+// Not a secret; the tailnet-only reachability of the direct origin is the real
+// gate. Must match UPLOAD_DIRECT_KEY on the server.
+export const DIRECT_UPLOAD_KEY: string = import.meta.env.VITE_DIRECT_UPLOAD_KEY ?? ''
+
 export class ApiError extends Error {
   status: number
   constructor(status: number, message: string) {
@@ -17,6 +34,15 @@ export class ApiError extends Error {
 export class SessionExpiredError extends Error {
   constructor() {
     super('Cloudflare Access session expired')
+  }
+}
+
+// A file too big for Cloudflare (>100 MB) when no Cloudflare-bypass path is
+// available/reachable — e.g. the device isn't on the tailnet. The upload
+// can't physically go through, so surface why rather than a generic failure.
+export class DirectUploadUnavailableError extends Error {
+  constructor() {
+    super('too large for this network — connect to Tailscale to upload big videos')
   }
 }
 
@@ -55,9 +81,15 @@ function notifyAuthRequired() {
   for (const fn of authListeners) fn()
 }
 
-export async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_ORIGIN}${path}`, {
-    ...init,
+export async function request<T>(
+  path: string,
+  init?: RequestInit & { origin?: string },
+): Promise<T> {
+  // `origin` overrides API_ORIGIN for calls that must skip Cloudflare (large
+  // uploads via the direct-upload origin); everything else uses API_ORIGIN.
+  const { origin, ...fetchInit } = init ?? {}
+  const res = await fetch(`${origin ?? API_ORIGIN}${path}`, {
+    ...fetchInit,
     credentials: 'include',
   })
 

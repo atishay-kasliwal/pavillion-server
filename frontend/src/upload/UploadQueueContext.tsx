@@ -10,11 +10,11 @@ import {
 } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { upload } from '../api/endpoints'
-import { ApiError } from '../api/client'
+import { ApiError, DirectUploadUnavailableError } from '../api/client'
 import { pushToast } from '../lib/toast'
 import type { Source, UploadResult } from '../api/types'
 
-const MAX_SIZE = 200 * 1024 * 1024 // matches the server's in-memory cap
+const MAX_SIZE = 200 * 1024 * 1024 // the API's hard in-memory cap
 
 export type UploadRowStatus =
   | 'queued'
@@ -182,6 +182,11 @@ export function UploadQueueProvider({ children }: { children: ReactNode }) {
         if (err instanceof ApiError && err.status === 409) {
           patchRow(row.key, { status: 'conflict', message: 'name already exists' })
           recordHistory(row, 'conflict')
+        } else if (err instanceof DirectUploadUnavailableError) {
+          // Over Cloudflare's 100 MB cap with no reachable bypass — mark it
+          // too-large (not a transient error) with a message that says why.
+          patchRow(row.key, { status: 'too-large', message: err.message })
+          recordHistory(row, 'too-large')
         } else {
           patchRow(row.key, {
             status: 'error',

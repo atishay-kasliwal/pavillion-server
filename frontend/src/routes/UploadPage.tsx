@@ -68,8 +68,8 @@ export function UploadPage() {
         </div>
         <div className="dropzone-label pointer-coarse-only">Tap to choose photos or files</div>
         <div className="dropzone-hint">
-          Photos &amp; videos → Photos · Audio → Music · Everything else → Files · 200MB max per
-          file
+          Photos &amp; videos → Photos · Audio → Music · Everything else → Files · up to 200MB per
+          file (over 100MB needs Tailscale)
         </div>
       </div>
 

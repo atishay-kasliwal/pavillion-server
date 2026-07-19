@@ -1,4 +1,10 @@
-import { request } from './client'
+import {
+  request,
+  CLOUDFLARE_BODY_LIMIT,
+  DIRECT_UPLOAD_ORIGIN,
+  DIRECT_UPLOAD_KEY,
+  DirectUploadUnavailableError,
+} from './client'
 import type {
   AlbumContents,
   AlbumSongs,
@@ -30,6 +36,23 @@ export const upload = (file: File, folder?: string) => {
   const form = new FormData()
   form.append('file', file)
   if (folder) form.append('folder', folder)
+
+  // Files over Cloudflare's 100 MB body cap can't go through the normal
+  // (Cloudflare-proxied) origin — they'd 413. Route them to the direct-upload
+  // origin (Tailscale HTTPS) instead. If none is configured/reachable, fail
+  // with a clear message rather than letting Cloudflare reject it.
+  if (file.size > CLOUDFLARE_BODY_LIMIT) {
+    if (!DIRECT_UPLOAD_ORIGIN) throw new DirectUploadUnavailableError()
+    return request<UploadResult>('/api/upload', {
+      method: 'POST',
+      body: form,
+      origin: DIRECT_UPLOAD_ORIGIN,
+      // Stands in for the session cookie, which can't cross to the ts.net
+      // domain. The API accepts it only on this route (see api/src/index.js).
+      headers: DIRECT_UPLOAD_KEY ? { 'X-Upload-Key': DIRECT_UPLOAD_KEY } : undefined,
+    })
+  }
+
   return request<UploadResult>('/api/upload', { method: 'POST', body: form })
 }
 
