@@ -4,6 +4,7 @@ import {
   listNavidromeArtists,
   listNavidromeArtistAlbums,
   listNavidromeAlbumSongs,
+  getNavidromeRandomSongs,
 } from '../clients/navidrome.js';
 import { listFilebrowserFolder, createFilebrowserFolder } from '../clients/filebrowser.js';
 
@@ -29,6 +30,15 @@ browseRouter.get('/browse/immich/albums', async (_req, res, next) => {
 browseRouter.get('/browse/immich/albums/:id', async (req, res, next) => {
   try {
     res.json({ items: await listImmichAlbumAssets(req.params.id) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// A random cross-library song set for the Music tab's "Shuffle all".
+browseRouter.get('/browse/navidrome/random', async (_req, res, next) => {
+  try {
+    res.json({ songs: await getNavidromeRandomSongs() });
   } catch (err) {
     next(err);
   }

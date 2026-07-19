@@ -53,13 +53,39 @@ export type UploadSummary = {
   percent: number
 }
 
+// A persisted record of a settled upload — survives page refreshes and
+// sessions (the live UploadRow can't: its File can't be re-read after a
+// reload). This is history/audit only, not something that can resume.
+export type UploadHistoryEntry = {
+  key: string
+  name: string
+  size: number
+  destination: Source
+  status: 'done' | 'duplicate' | 'error' | 'conflict' | 'too-large'
+  at: number
+}
+
+const HISTORY_KEY = 'pavillion.uploadHistory'
+const HISTORY_LIMIT = 200
+
+function loadHistory(): UploadHistoryEntry[] {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY)
+    return raw ? (JSON.parse(raw) as UploadHistoryEntry[]) : []
+  } catch {
+    return []
+  }
+}
+
 type UploadQueueApi = {
   rows: UploadRow[]
   summary: UploadSummary
+  history: UploadHistoryEntry[]
   addFiles: (entries: AddFilesEntry[]) => void
   retry: (key: string) => void
   renameAndRetry: (key: string, newName: string) => void
   clearCompleted: () => void
+  clearHistory: () => void
 }
 
 const UploadQueueContext = createContext<UploadQueueApi | null>(null)
@@ -86,9 +112,37 @@ let keyCounter = 0
 // regardless of which screen started the upload.
 export function UploadQueueProvider({ children }: { children: ReactNode }) {
   const [rows, setRows] = useState<UploadRow[]>([])
+  const [history, setHistory] = useState<UploadHistoryEntry[]>(() => loadHistory())
   const rowsRef = useRef<UploadRow[]>([])
   const uploadingRef = useRef(false)
   const qc = useQueryClient()
+
+  // Persist history whenever it changes so a refresh/return keeps the record.
+  useEffect(() => {
+    try {
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(history))
+    } catch {
+      // localStorage full/unavailable — history is best-effort, not critical.
+    }
+  }, [history])
+
+  const recordHistory = useCallback((row: UploadRow, status: UploadHistoryEntry['status']) => {
+    setHistory((h) =>
+      [
+        {
+          key: `${row.key}-${Date.now()}`,
+          name: row.file.name,
+          size: row.file.size,
+          destination: row.destination,
+          status,
+          at: Date.now(),
+        },
+        ...h,
+      ].slice(0, HISTORY_LIMIT),
+    )
+  }, [])
+
+  const clearHistory = useCallback(() => setHistory([]), [])
 
   const setRowsState = useCallback((updater: React.SetStateAction<UploadRow[]>) => {
     setRows((current) => {
@@ -121,20 +175,23 @@ export function UploadQueueProvider({ children }: { children: ReactNode }) {
       try {
         const result = await upload(row.file, row.folder)
         patchRow(row.key, { status: result.duplicate ? 'duplicate' : 'done' })
+        recordHistory(row, result.duplicate ? 'duplicate' : 'done')
         invalidateFor(row.destination)
         row.onUploaded?.(result)
       } catch (err) {
         if (err instanceof ApiError && err.status === 409) {
           patchRow(row.key, { status: 'conflict', message: 'name already exists' })
+          recordHistory(row, 'conflict')
         } else {
           patchRow(row.key, {
             status: 'error',
             message: err instanceof Error ? err.message : 'upload failed',
           })
+          recordHistory(row, 'error')
         }
       }
     },
-    [patchRow, invalidateFor],
+    [patchRow, invalidateFor, recordHistory],
   )
 
   // Sequential — the server buffers each file fully in RAM (200MB cap).
@@ -171,9 +228,13 @@ export function UploadQueueProvider({ children }: { children: ReactNode }) {
         }),
       )
       setRowsState((rs) => [...rs, ...newRows])
+      // Too-large rows never reach the queue/uploadOne, so record them here.
+      for (const row of newRows) {
+        if (row.status === 'too-large') recordHistory(row, 'too-large')
+      }
       void pump()
     },
-    [setRowsState, pump],
+    [setRowsState, pump, recordHistory],
   )
 
   const retry = useCallback(
@@ -220,6 +281,22 @@ export function UploadQueueProvider({ children }: { children: ReactNode }) {
     return { total, done, failed, active, percent: total === 0 ? 0 : (settled / total) * 100 }
   }, [rows])
 
+  // Warn before a refresh/close while uploads are still in flight — the
+  // browser can't re-read a File after a reload, so an accidental navigation
+  // silently kills whatever hasn't finished. (History still survives, but the
+  // in-progress bytes don't.)
+  useEffect(() => {
+    if (summary.active === 0) return
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      // Modern browsers show their own generic message; a non-empty
+      // returnValue is what actually triggers the prompt.
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => window.removeEventListener('beforeunload', onBeforeUnload)
+  }, [summary.active])
+
   const prevActiveRef = useRef(0)
   useEffect(() => {
     const wasActive = prevActiveRef.current > 0
@@ -247,8 +324,8 @@ export function UploadQueueProvider({ children }: { children: ReactNode }) {
   }, [summary.active, summary.total, summary.done, summary.failed, clearCompleted])
 
   const api = useMemo<UploadQueueApi>(
-    () => ({ rows, summary, addFiles, retry, renameAndRetry, clearCompleted }),
-    [rows, summary, addFiles, retry, renameAndRetry, clearCompleted],
+    () => ({ rows, summary, history, addFiles, retry, renameAndRetry, clearCompleted, clearHistory }),
+    [rows, summary, history, addFiles, retry, renameAndRetry, clearCompleted, clearHistory],
   )
 
   return <UploadQueueContext.Provider value={api}>{children}</UploadQueueContext.Provider>
