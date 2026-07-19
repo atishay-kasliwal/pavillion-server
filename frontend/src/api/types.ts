@@ -72,6 +72,9 @@ export type FolderListing = {
 
 export type UploadResult = {
   destination: Source
+  // Immich uploads only — true when the file's content checksum matched an
+  // asset already in the library (nothing new was stored).
+  duplicate?: boolean
   [key: string]: unknown
 }
 

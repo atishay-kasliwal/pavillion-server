@@ -3,6 +3,7 @@ import { useHealth, useSystemStorage } from './hooks/queries'
 import { useLogout } from './hooks/mutations'
 import { formatBytes } from './lib/format'
 import { MiniPlayer } from './player/MiniPlayer'
+import { UploadTray } from './upload/UploadTray'
 import { SessionExpiredGate } from './components/SessionExpiredGate'
 import { ToastStack } from './components/ToastStack'
 import {
@@ -36,14 +37,18 @@ export function App() {
         <div className="brand">Pavillion</div>
         <div className="topbar-right">
           {storage.data ? (
-            <span className="storage-pill">
-              {formatBytes(storage.data.freeBytes)} free of{' '}
-              {formatBytes(storage.data.totalBytes)}
+            <span
+              className="storage-pill"
+              title={`${formatBytes(storage.data.freeBytes)} free of ${formatBytes(storage.data.totalBytes)}`}
+            >
+              {Math.round((storage.data.freeBytes / storage.data.totalBytes) * 100)}% free
             </span>
           ) : null}
-          <div className="status-pill">
+          <div
+            className="status-pill"
+            title={health.isSuccess ? 'Connected' : health.isError ? 'Offline' : 'Checking…'}
+          >
             <span className={`status-dot ${status}`} />
-            {health.isSuccess ? 'Connected' : health.isError ? 'Offline' : 'Checking…'}
           </div>
           <button
             className="row-action"
@@ -76,6 +81,7 @@ export function App() {
         ))}
       </nav>
 
+      <UploadTray />
       <SessionExpiredGate />
       <ToastStack />
     </div>

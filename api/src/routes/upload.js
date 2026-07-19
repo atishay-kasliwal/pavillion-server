@@ -29,8 +29,13 @@ uploadRouter.post('/upload', upload.single('file'), async (req, res, next) => {
 
   try {
     if (destination === 'immich') {
+      // Immich dedupes by content checksum regardless of our (always-unique)
+      // deviceAssetId — a re-upload of the same bytes comes back with
+      // status: 'duplicate' and the *existing* asset's id, not a new one.
+      // Surface that instead of reporting it as a fresh upload.
       const asset = await uploadToImmich(req.file);
-      return res.status(201).json({ destination, asset });
+      const duplicate = asset.status === 'duplicate';
+      return res.status(duplicate ? 200 : 201).json({ destination, asset, duplicate });
     }
 
     if (destination === 'navidrome') {

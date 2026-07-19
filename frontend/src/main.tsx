@@ -5,6 +5,7 @@ import { AuthRequiredError, SessionExpiredError } from './api/client'
 import { pushToast } from './lib/toast'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { PlayerProvider } from './player/PlayerContext'
+import { UploadQueueProvider } from './upload/UploadQueueContext'
 import { AuthGate } from './components/AuthGate'
 import { App } from './App'
 import { GalleryPage } from './routes/GalleryPage'
@@ -55,9 +56,11 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <AuthGate>
-        <PlayerProvider>
-          <RouterProvider router={router} />
-        </PlayerProvider>
+        <UploadQueueProvider>
+          <PlayerProvider>
+            <RouterProvider router={router} />
+          </PlayerProvider>
+        </UploadQueueProvider>
       </AuthGate>
     </QueryClientProvider>
   </StrictMode>,

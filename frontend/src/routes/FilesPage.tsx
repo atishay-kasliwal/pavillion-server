@@ -1,10 +1,9 @@
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { useQueryClient } from '@tanstack/react-query'
-import { mediaUrl, ApiError } from '../api/client'
-import { upload } from '../api/endpoints'
+import { mediaUrl } from '../api/client'
 import { useFolder } from '../hooks/queries'
 import { useCreateFolder, useDeleteFile, useMoveFile } from '../hooks/mutations'
+import { useUploadQueue } from '../upload/UploadQueueContext'
 import { Breadcrumbs } from '../components/Breadcrumbs'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { FileRow } from '../components/FileRow'
@@ -13,12 +12,9 @@ import { QuickUploadButton } from '../components/QuickUploadButton'
 import { StorageOverview } from '../components/StorageOverview'
 import { SkeletonRows } from '../components/Skeleton'
 import { EmptyState, ErrorBanner } from '../components/basics'
-import { pushToast } from '../lib/toast'
 import { useEscapeKey } from '../lib/useEscapeKey'
 import { walkDrop } from '../lib/walkDrop'
 import type { FbEntry } from '../api/types'
-
-const MAX_SIZE = 200 * 1024 * 1024 // matches the server's in-memory cap
 
 const joinPath = (base: string, sub: string) =>
   [base === '/' ? '' : base, sub].filter(Boolean).join('/') || '/'
@@ -37,7 +33,7 @@ export function FilesPage() {
   const deleteFile = useDeleteFile()
   const moveFile = useMoveFile()
 
-  const qc = useQueryClient()
+  const { addFiles } = useUploadQueue()
   const [newFolderOpen, setNewFolderOpen] = useState(false)
   const [newFolderName, setNewFolderName] = useState('')
   const [confirmDelete, setConfirmDelete] = useState<FbEntry | null>(null)
@@ -46,7 +42,6 @@ export function FilesPage() {
   const [renaming, setRenaming] = useState<FbEntry | null>(null)
   const [renameValue, setRenameValue] = useState('')
   const [dragOver, setDragOver] = useState(false)
-  const [uploading, setUploading] = useState(false)
   useEscapeKey(() => setNewFolderOpen(false), newFolderOpen)
   useEscapeKey(() => setMoving(null), moving !== null)
   useEscapeKey(() => setRenaming(null), renaming !== null)
@@ -93,40 +88,20 @@ export function FilesPage() {
   }
 
   // Drops straight into whatever folder is currently open — walks dropped
-  // directories client-side (the API only takes one file per request) and
-  // preserves their structure under the current path.
+  // directories client-side (the API only takes one file per request),
+  // preserves their structure under the current path, and hands off to the
+  // shared upload queue (progress shows in the global UploadTray).
   const onDrop = async (e: React.DragEvent) => {
     e.preventDefault()
     setDragOver(false)
     const dropped = await walkDrop(e.dataTransfer)
     if (dropped.length === 0) return
-
-    setUploading(true)
-    let succeeded = 0
-    const failed: string[] = []
-    for (const { file, relativeDir } of dropped) {
-      if (file.size > MAX_SIZE) {
-        failed.push(`${file.name}: over the 200MB limit`)
-        continue
-      }
-      const targetFolder = joinPath(path, relativeDir)
-      try {
-        await upload(file, targetFolder === '/' ? undefined : targetFolder)
-        succeeded += 1
-      } catch (err) {
-        if (err instanceof ApiError && err.status === 409) {
-          failed.push(`${file.name}: already exists`)
-        } else {
-          failed.push(`${file.name}: ${err instanceof Error ? err.message : 'upload failed'}`)
-        }
-      }
-    }
-    setUploading(false)
-    if (succeeded > 0) {
-      void qc.invalidateQueries({ queryKey: ['folder'] })
-      pushToast(succeeded === 1 ? 'Uploaded 1 file' : `Uploaded ${succeeded} files`)
-    }
-    for (const msg of failed) pushToast(msg, 'error')
+    addFiles(
+      dropped.map(({ file, relativeDir }) => {
+        const targetFolder = joinPath(path, relativeDir)
+        return { file, relativeDir, folder: targetFolder === '/' ? undefined : targetFolder }
+      }),
+    )
   }
 
   const items = folder.data?.items ?? []
@@ -172,7 +147,6 @@ export function FilesPage() {
           {dragOver ? (
             <div className="files-drop-hint">Drop to upload into {path === '/' ? 'root' : path}</div>
           ) : null}
-          {uploading ? <div className="files-drop-hint uploading">Uploading…</div> : null}
 
           {folder.isLoading ? <SkeletonRows /> : null}
           {folder.isError ? <ErrorBanner>Couldn&apos;t load this folder.</ErrorBanner> : null}

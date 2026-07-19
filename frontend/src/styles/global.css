@@ -328,8 +328,16 @@ a:focus-visible,
   opacity: 0.45;
   cursor: default;
 }
+.btn-icon {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
 
 .input {
+  /* 16px minimum — iOS Safari auto-zooms the page on focus for any input
+     smaller than that, which reads as broken/janky on a real phone. */
+  font-size: 16px;
   background: var(--input-bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -433,18 +441,26 @@ a:focus-visible,
   position: absolute;
   top: 8px;
   left: 8px;
-  width: 22px;
-  height: 22px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.5);
   border: 1.5px solid rgba(255, 255, 255, 0.7);
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0;
+  /* Visible-but-subtle by default so touch users can see and tap it —
+     :hover can't reveal anything on a touchscreen. Mouse users get the
+     cleaner hover-to-reveal treatment below. */
+  opacity: 0.85;
   transition: opacity 0.12s ease;
   color: #fff;
   font-size: 13px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .media-tile .tile-check {
+    opacity: 0;
+  }
 }
 .media-tile:hover .tile-check,
 .media-tile.selected .tile-check,
@@ -713,9 +729,18 @@ a:focus-visible,
 }
 .row-actions {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 4px;
-  opacity: 0;
+  /* Visible by default — :hover reveals nothing on a touchscreen, so
+     these can't be hidden-until-hover as the only way to see them. */
+  opacity: 1;
   transition: opacity 0.12s ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .row-actions {
+    opacity: 0;
+  }
 }
 .row:hover .row-actions {
   opacity: 1;
@@ -1188,13 +1213,17 @@ a:focus-visible,
 /* ---------- Upload ---------- */
 
 .dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   border: 2px dashed var(--border-hover);
   border-radius: var(--radius);
-  padding: 48px 24px;
+  padding: 40px 24px;
   text-align: center;
   color: var(--text-dim);
   cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  transition: border-color 0.18s var(--ease), background 0.18s var(--ease),
+    transform 0.15s var(--ease);
   margin-bottom: 24px;
 }
 .dropzone.over,
@@ -1202,6 +1231,77 @@ a:focus-visible,
   border-color: var(--accent-soft);
   background: var(--accent-glow);
 }
+.dropzone.over {
+  transform: scale(1.01);
+}
+.dropzone-icon {
+  width: 30px;
+  height: 30px;
+  color: var(--accent-soft);
+  margin-bottom: 10px;
+}
+.dropzone-label {
+  color: var(--text-strong);
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.dropzone-hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+
+.upload-summary {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+.upload-summary-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.upload-summary-text {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-dim);
+}
+.upload-summary-count {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--text-strong);
+}
+.upload-clear {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background 0.15s var(--ease), color 0.15s var(--ease);
+}
+.upload-clear:hover {
+  background: var(--surface-hover);
+  color: var(--text-strong);
+}
+.upload-progress-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--surface-hover);
+  overflow: hidden;
+}
+.upload-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width 0.25s var(--ease);
+}
+.upload-progress-fill.has-errors {
+  background: var(--red);
+}
+
 .upload-row {
   display: flex;
   align-items: center;
@@ -1212,27 +1312,84 @@ a:focus-visible,
   margin-bottom: 6px;
 }
 .dest-badge {
-  font-size: 0.68rem;
-  font-family: var(--font-mono);
-  padding: 2px 8px;
-  border-radius: 6px;
-  border: 1px solid var(--border-hover);
-  color: var(--text-dim);
+  font-size: 0.66rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid transparent;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   flex-shrink: 0;
 }
-.upload-status {
-  font-size: 0.78rem;
-  font-family: var(--font-mono);
-  flex-shrink: 0;
+.dest-badge.dest-immich {
+  background: oklch(0.66 0.19 255 / 0.14);
+  color: var(--accent-soft);
 }
-.upload-status.done {
+.dest-badge.dest-navidrome {
+  background: oklch(0.72 0.16 155 / 0.14);
   color: var(--green);
 }
-.upload-status.error,
-.upload-status.conflict {
+.dest-badge.dest-filebrowser {
+  background: var(--surface-hover);
+  color: var(--text-dim);
+}
+.upload-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.upload-status .status-icon {
+  width: 15px;
+  height: 15px;
+}
+.upload-status.tone-done {
+  color: var(--green);
+}
+.upload-status.tone-error {
   color: var(--red);
+}
+.upload-status.tone-uploading {
+  color: var(--accent-soft);
+}
+.upload-status.tone-duplicate {
+  color: var(--text-dim);
+}
+.mini-spinner {
+  width: 13px;
+  height: 13px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent-soft);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+/* Show/hide by actual input capability, not viewport width — a touch
+   laptop and a narrow desktop window are both "small" but only one of
+   them can't drag-and-drop or use a camera. */
+.pointer-coarse-only {
+  display: none;
+}
+@media (pointer: coarse) {
+  .pointer-coarse-only {
+    display: block;
+  }
+  .pointer-fine-only {
+    display: none;
+  }
+}
+
+.mobile-quick-actions {
+  margin: -12px 0 20px;
+}
+.mobile-quick-actions .btn {
+  width: 100%;
+  justify-content: center;
+  padding: 12px 16px;
 }
 
 /* ---------- Toasts ---------- */
@@ -1246,6 +1403,116 @@ a:focus-visible,
   flex-direction: column-reverse;
   gap: 8px;
   max-width: 320px;
+}
+
+/* ---------- Global upload tray — bottom-left, mirrors the toast stack's
+   offset so it clears the mini-player/nav pill the same way ---------- */
+
+.upload-tray {
+  position: fixed;
+  left: 20px;
+  bottom: calc(var(--navbar-clearance) + var(--player-h) + 20px);
+  z-index: 140;
+  width: min(320px, calc(100vw - 40px));
+}
+
+.upload-tray-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: oklch(0.16 0.006 260 / 0.9);
+  backdrop-filter: blur(20px) saturate(1.5);
+  -webkit-backdrop-filter: blur(20px) saturate(1.5);
+  border: 1px solid var(--border-hover);
+  box-shadow: var(--shadow-md);
+  color: var(--text-strong);
+  transition: background 0.15s var(--ease);
+}
+.upload-tray-pill:hover {
+  background: oklch(0.2 0.006 260 / 0.92);
+}
+.upload-tray-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 1;
+  min-width: 0;
+}
+.upload-tray-track {
+  flex: 1;
+  min-width: 24px;
+}
+.upload-tray-chevron {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+  transform: rotate(90deg);
+  transition: transform 0.15s var(--ease);
+}
+.upload-tray-chevron.open {
+  transform: rotate(-90deg);
+}
+
+.upload-tray-panel {
+  background: oklch(0.14 0.005 260 / 0.96);
+  backdrop-filter: blur(24px) saturate(1.5);
+  -webkit-backdrop-filter: blur(24px) saturate(1.5);
+  border: 1px solid var(--border-hover);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  margin-bottom: 10px;
+  padding: 12px;
+  animation: infoSlideIn 0.2s var(--ease-spring);
+}
+.upload-tray-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-strong);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0 4px 8px;
+}
+.upload-tray-viewall {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--accent-soft);
+  text-transform: none;
+  letter-spacing: normal;
+}
+.upload-tray-viewall:hover {
+  color: var(--text-strong);
+}
+.upload-tray-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+.upload-tray-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 4px;
+  border-radius: var(--radius-sm);
+}
+.upload-tray-row .row-name {
+  font-size: 0.82rem;
+}
+.upload-tray-row .row-sub {
+  font-size: 0.72rem;
+}
+.upload-tray-row .upload-status {
+  flex-shrink: 0;
 }
 .toast {
   background: oklch(0.18 0.006 260 / 0.85);
@@ -1332,6 +1599,12 @@ a:focus-visible,
     max-width: none;
     bottom: calc(var(--navbar-clearance) + var(--player-h) + 12px);
   }
+  .upload-tray {
+    left: 12px;
+    right: 12px;
+    width: auto;
+    bottom: calc(var(--navbar-clearance) + var(--player-h) + 12px);
+  }
   .files-layout {
     flex-direction: column;
   }
@@ -1340,4 +1613,87 @@ a:focus-visible,
     max-height: 180px;
     position: static;
   }
+  .tree-row {
+    padding: 9px 6px;
+  }
+
+  /* The Finder-style column list (name/size/modified) doesn't fit a phone
+     screen — drop the header and the least-essential column instead of
+     letting it force horizontal scroll or crush the filename. */
+  .file-list-header {
+    display: none;
+  }
+  .file-row .col-date {
+    display: none;
+  }
+  .file-row .col-size {
+    width: auto;
+    font-size: 0.72rem;
+  }
+
+  /* Bigger, always-reachable tap targets — row actions no longer depend
+     on hover to appear (handled above), but still need real thumb room. */
+  .row {
+    padding: 12px 10px;
+  }
+  .row-action {
+    padding: 9px 11px;
+    font-size: 0.85rem;
+  }
+  .btn {
+    padding: 10px 16px;
+  }
+  .icon-btn {
+    width: 42px;
+    height: 42px;
+  }
+
+  .lightbox-name {
+    max-width: 55vw;
+  }
+  .lightbox-info {
+    width: 100vw;
+  }
+
+  .card-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+  }
+
+  /* Upload rows: badge + filename + status + retry all in one line don't
+     fit a phone width — wrap into two lines instead of truncating or
+     forcing horizontal scroll. */
+  .upload-row {
+    flex-wrap: wrap;
+  }
+  .upload-row .row-main {
+    flex-basis: 100%;
+    order: 1;
+  }
+  .upload-row .dest-badge {
+    order: 0;
+  }
+  .upload-row .upload-status,
+  .upload-row .row-action {
+    order: 2;
+  }
+  .dropzone {
+    padding: 28px 16px;
+  }
+  .dropzone-hint {
+    display: none;
+  }
+
+  /* Free-space text is long ("412 GB free of 931 GB") and secondary —
+     drop it on narrow screens so brand + connection status stay legible. */
+  .storage-pill {
+    display: none;
+  }
+}
+
+/* iPhone notch/home-indicator safe areas — the topbar sits under the
+   status bar/notch otherwise. */
+.topbar {
+  padding-top: env(safe-area-inset-top, 0px);
+  height: calc(var(--topbar-h) + env(safe-area-inset-top, 0px));
 }
