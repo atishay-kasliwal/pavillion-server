@@ -12,7 +12,8 @@ const joinFolder = (base: string, sub: string) =>
   [base === '/' ? '' : base, sub].filter(Boolean).join('/') || undefined
 
 export function UploadPage() {
-  const { rows, summary, retry, renameAndRetry, clearCompleted, addFiles } = useUploadQueue()
+  const { rows, summary, history, retry, renameAndRetry, clearCompleted, clearHistory, addFiles } =
+    useUploadQueue()
   const [folder, setFolder] = useState('/')
   const [pickingFolder, setPickingFolder] = useState(false)
   const [dragOver, setDragOver] = useState(false)
@@ -182,6 +183,39 @@ export function UploadPage() {
           })}
         </div>
       )}
+
+      {history.length > 0 ? (
+        <div className="upload-history">
+          <div className="upload-history-header">
+            <h2 className="upload-history-title">History</h2>
+            <button className="upload-clear" onClick={clearHistory}>
+              Clear history
+            </button>
+          </div>
+          {/* Persisted across refreshes and sessions (see UploadQueueContext) —
+              a record of what went up, separate from the live queue above. */}
+          {history.map((entry) => {
+            const meta = statusMeta[entry.status]
+            return (
+              <div key={entry.key} className="upload-row">
+                <span className={`dest-badge dest-${entry.destination}`}>
+                  {destinationLabel[entry.destination]}
+                </span>
+                <div className="row-main">
+                  <div className="row-name">{entry.name}</div>
+                  <div className="row-sub">
+                    {formatBytes(entry.size)} · {new Date(entry.at).toLocaleString()}
+                  </div>
+                </div>
+                <span className={`upload-status tone-${meta.tone}`}>
+                  {meta.icon}
+                  {meta.label}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      ) : null}
 
       {pickingFolder ? (
         <FolderPicker

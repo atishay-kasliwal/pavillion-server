@@ -55,6 +55,10 @@ export const artistAlbums = (id: string) =>
 export const albumSongs = (id: string) =>
   request<AlbumSongs>(`/api/browse/navidrome/albums/${encodeURIComponent(id)}`)
 
+// A random cross-library song set for "Shuffle all" on the Music tab.
+export const randomSongs = () =>
+  request<AlbumSongs>('/api/browse/navidrome/random')
+
 // Browse — Filebrowser
 export const browseFiles = (path: string) =>
   request<FolderListing>(`/api/browse/filebrowser?path=${encodeURIComponent(path)}`)

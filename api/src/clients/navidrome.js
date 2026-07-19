@@ -88,6 +88,24 @@ export async function searchNavidrome(query) {
   return songs.map(mapNavidromeSong);
 }
 
+// A random cross-library set for the Music tab's "Shuffle all" — Subsonic's
+// getRandomSongs picks from the whole library server-side, so there's no need
+// to walk every artist/album on the client. `size` is Subsonic's own cap
+// (default 10); 200 gives a long shuffle queue without an unbounded response.
+export async function getNavidromeRandomSongs(size = 200) {
+  let result;
+  try {
+    result = await subsonicGet('getRandomSongs', { size: String(size) });
+  } catch (err) {
+    // Same empty-library case as listNavidromeArtists — nothing scanned yet
+    // is a legitimate empty state, not a 500.
+    if (/library not found or empty/i.test(err.message)) return [];
+    throw err;
+  }
+  const songs = result.randomSongs?.song ?? [];
+  return songs.map(mapNavidromeSong);
+}
+
 // Browse (not search) — the library, top-down: artists -> albums -> songs.
 export async function listNavidromeArtists() {
   let result;

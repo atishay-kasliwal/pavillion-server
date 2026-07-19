@@ -43,7 +43,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   return (
     <div className="login-gate">
       <form className="login-form" onSubmit={submit}>
-        <h1>Pavillion</h1>
+        <h1>Archive</h1>
         <input
           className="input"
           placeholder="Username"
