@@ -1,17 +1,19 @@
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { mediaUrl } from '../api/client'
+import { mediaUrl, ApiError } from '../api/client'
 import { useFolder } from '../hooks/queries'
 import { useCreateFolder, useDeleteFile, useMoveFile } from '../hooks/mutations'
 import { useUploadQueue } from '../upload/UploadQueueContext'
 import { Breadcrumbs } from '../components/Breadcrumbs'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { FileRow } from '../components/FileRow'
+import { FolderPicker } from '../components/FolderPicker'
 import { FolderTree } from '../components/FolderTree'
 import { QuickUploadButton } from '../components/QuickUploadButton'
 import { StorageOverview } from '../components/StorageOverview'
 import { SkeletonRows } from '../components/Skeleton'
 import { EmptyState, ErrorBanner } from '../components/basics'
+import { pushToast } from '../lib/toast'
 import { useEscapeKey } from '../lib/useEscapeKey'
 import { walkDrop } from '../lib/walkDrop'
 import type { FbEntry } from '../api/types'
@@ -38,7 +40,6 @@ export function FilesPage() {
   const [newFolderName, setNewFolderName] = useState('')
   const [confirmDelete, setConfirmDelete] = useState<FbEntry | null>(null)
   const [moving, setMoving] = useState<FbEntry | null>(null)
-  const [destination, setDestination] = useState('')
   const [renaming, setRenaming] = useState<FbEntry | null>(null)
   const [renameValue, setRenameValue] = useState('')
   const [dragOver, setDragOver] = useState(false)
@@ -62,14 +63,38 @@ export function FilesPage() {
 
   const startMove = (entry: FbEntry) => {
     setMoving(entry)
-    setDestination(entry.path)
   }
 
-  const doMove = () => {
-    if (!moving || !destination.trim()) return
+  // Move an entry into a folder chosen from the picker: the new path is
+  // that folder + the entry's existing name. Edge cases handled here and in
+  // the picker: same-folder no-op, folder-into-itself (blocked by the picker),
+  // and a name collision at the destination (Filebrowser's override=false
+  // returns 409, surfaced as a clear message rather than generic "Moved").
+  const doMoveTo = (folderPath: string) => {
+    if (!moving) return
+    const currentParent = parentOf(moving.path)
+    if (folderPath === currentParent) {
+      pushToast('Already in that folder', 'error')
+      return
+    }
+    // joinPath('/', name) drops the leading slash; every Filebrowser path is
+    // absolute, so normalize it back on.
+    const joined = joinPath(folderPath, moving.name)
+    const dest = joined.startsWith('/') ? joined : `/${joined}`
     moveFile.mutate(
-      { path: moving.path, destination: destination.trim() },
-      { onSuccess: () => setMoving(null) },
+      { path: moving.path, destination: dest },
+      {
+        onSuccess: () => setMoving(null),
+        onError: (err) => {
+          const is409 = err instanceof ApiError && err.status === 409
+          pushToast(
+            is409
+              ? `“${moving.name}” already exists in that folder`
+              : `Couldn’t move “${moving.name}”`,
+            'error',
+          )
+        },
+      },
     )
   }
 
@@ -263,33 +288,17 @@ export function FilesPage() {
       ) : null}
 
       {moving ? (
-        <div className="dialog-backdrop" onClick={() => setMoving(null)}>
-          <div className="dialog" onClick={(e) => e.stopPropagation()}>
-            <h3>Move / rename</h3>
-            <p style={{ color: 'var(--text-dim)', fontSize: '0.85rem', marginTop: 0 }}>
-              Edit the name to rename, or change the folder to move.
-            </p>
-            <input
-              className="input"
-              value={destination}
-              autoFocus
-              onChange={(e) => setDestination(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && doMove()}
-            />
-            <div className="dialog-actions">
-              <button className="btn" onClick={() => setMoving(null)}>
-                Cancel
-              </button>
-              <button
-                className="btn primary"
-                onClick={doMove}
-                disabled={moveFile.isPending || !destination.trim()}
-              >
-                {moveFile.isPending ? '…' : 'Move'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <FolderPicker
+          title={`Move “${moving.name}” to…`}
+          confirmVerb="Move here:"
+          initialPath={parentOf(moving.path)}
+          // For a folder, forbid dropping it into itself/a descendant; for a
+          // file, just disable re-picking the folder it's already in.
+          excludePath={moving.isDir ? moving.path : undefined}
+          disablePath={parentOf(moving.path)}
+          onPick={doMoveTo}
+          onCancel={() => setMoving(null)}
+        />
       ) : null}
     </div>
   )
