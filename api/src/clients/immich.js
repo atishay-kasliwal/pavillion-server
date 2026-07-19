@@ -150,6 +150,14 @@ export async function uploadToImmich(file) {
   return res.json();
 }
 
+// Diagnostic only (see routes/system.js) — GET /api/assets/:id returns the
+// full AssetResponseDto, to check whether exifInfo is actually populated
+// server-side vs. just missing from the /search/metadata list shape.
+export async function getImmichAssetDetail(assetId) {
+  const res = await immichFetch(`/api/assets/${assetId}`);
+  return res.json();
+}
+
 export function immichThumbnailProxyPath(assetId) {
   return `/api/assets/${assetId}/thumbnail`;
 }
