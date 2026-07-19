@@ -140,21 +140,29 @@ a:focus-visible,
   backdrop-filter: blur(20px) saturate(1.5);
   -webkit-backdrop-filter: blur(20px) saturate(1.5);
   border-bottom: 1px solid var(--border);
-  /* Not overflow:hidden — the seek strip sits along the bottom edge and its
-     grab area must not be clipped (that's what made scrubbing impossible).
-     The track name has its own ellipsis clipping, so nothing else needs it. */
+  /* Not overflow:hidden — the player's seek bar needs its full grab area
+     (clipping it was what made scrubbing impossible). The track name has its
+     own ellipsis clipping, so nothing else needs it. */
 }
 
 /* ---------- Player, embedded in the topbar (see MiniPlayer.tsx) ---------- */
 
-/* Compact and centered — just the transport + track name, not a bar that
-   stretches across the whole topbar. Auto margins center it between the
-   brand and the right-hand controls; max-width keeps a long track name from
-   pushing everything else out. */
+/* A compact, self-contained player centered in the topbar: a transport row
+   with its own seek bar beneath. Auto margins center it between the brand and
+   the right-hand controls; max-width keeps a long track name from pushing
+   everything else out. It's a column now (controls over seek), so it needs a
+   little vertical room — the seek bar overhangs the topbar's bottom edge. */
 .topbar-player {
   min-width: 0;
-  max-width: 460px;
+  width: min(460px, 42vw);
   margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+}
+
+.topbar-player-controls {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -212,20 +220,60 @@ a:focus-visible,
   margin: 0 4px;
 }
 
-/* Thin draggable strip along the topbar's bottom edge instead of a full
-   seek row — keeps the whole player compact enough to live in the topbar. */
+/* Seek row: elapsed / duration flanking a contained progress bar. The bar
+   is scoped to the player's own width (not stretched across the topbar), so
+   nothing overlays it and the whole thing is grabbable — the earlier bug was
+   the transport buttons sitting on top of a full-width invisible slider. */
+.topbar-seek {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.topbar-seek-time {
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  min-width: 32px;
+  text-align: center;
+}
+/* The bar is a group where a subtle track, an accent fill, and the (visually
+   invisible) range input all share the same 4px line. The input spans the
+   full width on top so every pixel is grabbable — its thumb is the only part
+   that shows, and it only appears on hover/drag for a clean resting look. */
+.topbar-seek-bar {
+  position: relative;
+  flex: 1;
+  height: 16px;
+  display: flex;
+  align-items: center;
+}
+.topbar-seek-bar::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 4px;
+  border-radius: 999px;
+  background: oklch(1 0 0 / 0.14);
+  pointer-events: none;
+}
+.topbar-seek-fill {
+  position: absolute;
+  left: 0;
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent-soft), var(--accent));
+  pointer-events: none;
+}
 .topbar-seek-input {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 0;
   width: 100%;
-  /* A tall, unclipped grab area (was 14px partly hidden by the topbar's
-     overflow:hidden, leaving only a 1px sliver you could actually hit). The
-     track is drawn near the bottom of this strip via the thumb margins. */
-  height: 20px;
+  height: 16px;
   margin: 0;
-  z-index: 41;
   -webkit-appearance: none;
   appearance: none;
   background: transparent;
@@ -233,34 +281,46 @@ a:focus-visible,
   touch-action: none;
 }
 .topbar-seek-input::-webkit-slider-runnable-track {
-  height: 3px;
-  /* Push the visible track to the bottom of the tall grab strip so it reads
-     as a thin line along the topbar's edge while the whole 20px is grabbable. */
-  margin-top: 15px;
-  background: var(--border-hover);
+  height: 16px;
+  background: transparent;
 }
 .topbar-seek-input::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 11px;
-  height: 11px;
+  width: 12px;
+  height: 12px;
+  margin-top: 2px;
   border-radius: 50%;
-  background: var(--accent-soft);
-  box-shadow: 0 1px 3px oklch(0 0 0 / 0.5);
-  margin-top: -4px;
+  background: #fff;
+  box-shadow: 0 1px 5px oklch(0 0 0 / 0.6);
+  /* Hidden at rest so the bar reads as a clean line; appears on interaction. */
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 0.14s var(--ease), transform 0.14s var(--ease-spring);
+}
+.topbar-seek-bar:hover .topbar-seek-input::-webkit-slider-thumb,
+.topbar-seek-input:active::-webkit-slider-thumb,
+.topbar-seek-input:focus-visible::-webkit-slider-thumb {
+  opacity: 1;
+  transform: scale(1);
 }
 .topbar-seek-input::-moz-range-track {
-  height: 3px;
-  margin-top: 15px;
-  background: var(--border-hover);
+  height: 16px;
+  background: transparent;
 }
 .topbar-seek-input::-moz-range-thumb {
-  width: 11px;
-  height: 11px;
+  width: 12px;
+  height: 12px;
   border: none;
   border-radius: 50%;
-  background: var(--accent-soft);
-  box-shadow: 0 1px 3px oklch(0 0 0 / 0.5);
+  background: #fff;
+  box-shadow: 0 1px 5px oklch(0 0 0 / 0.6);
+  opacity: 0;
+  transition: opacity 0.14s var(--ease);
+}
+.topbar-seek-bar:hover .topbar-seek-input::-moz-range-thumb,
+.topbar-seek-input:active::-moz-range-thumb {
+  opacity: 1;
 }
 
 .brand {
@@ -1747,10 +1807,17 @@ a:focus-visible,
   .main {
     padding: 16px 14px calc(var(--navbar-clearance) + 20px);
   }
-  /* Icons only — the track name loses the fight for space against
-     brand + status/logout on a phone-width topbar. */
+  /* Icons only — the track name and the seek-time labels lose the fight for
+     space against brand + status/logout on a phone-width topbar. The seek bar
+     itself stays. */
   .topbar-player-name {
     display: none;
+  }
+  .topbar-seek-time {
+    display: none;
+  }
+  .topbar-player {
+    width: min(300px, 52vw);
   }
   .topbar {
     padding: 0 12px;
