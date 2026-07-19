@@ -195,3 +195,58 @@ export function IconLogout({ className }: IconProps) {
     </svg>
   )
 }
+
+export function IconPlay({ className }: IconProps) {
+  return (
+    <svg {...base} fill="currentColor" stroke="none" className={className}>
+      <path d="M7 4.8c0-1.1 1.2-1.8 2.2-1.2l10.4 6.7c.9.6.9 1.9 0 2.5L9.2 19.9c-1 .6-2.2-.1-2.2-1.2z" />
+    </svg>
+  )
+}
+
+export function IconPause({ className }: IconProps) {
+  return (
+    <svg {...base} fill="currentColor" stroke="none" className={className}>
+      <rect x="5.5" y="4" width="5" height="16" rx="1.5" />
+      <rect x="13.5" y="4" width="5" height="16" rx="1.5" />
+    </svg>
+  )
+}
+
+export function IconSkipBack({ className }: IconProps) {
+  return (
+    <svg {...base} fill="currentColor" stroke="none" className={className}>
+      <path d="M6 4.5a1 1 0 0 1 1 1v15a1 1 0 0 1-2 0v-15a1 1 0 0 1 1-1z" />
+      <path d="M19.5 5.2c0-1.1-1.2-1.8-2.2-1.2L8.4 9.5c-1 .6-1 2.1 0 2.7l8.9 5.5c1 .6 2.2-.1 2.2-1.2z" />
+    </svg>
+  )
+}
+
+export function IconSkipForward({ className }: IconProps) {
+  return (
+    <svg {...base} fill="currentColor" stroke="none" className={className}>
+      <path d="M18 4.5a1 1 0 0 0-1 1v15a1 1 0 0 0 2 0v-15a1 1 0 0 0-1-1z" />
+      <path d="M4.5 5.2c0-1.1 1.2-1.8 2.2-1.2l8.9 5.5c1 .6 1 2.1 0 2.7l-8.9 5.5c-1 .6-2.2-.1-2.2-1.2z" />
+    </svg>
+  )
+}
+
+export function IconShuffle({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M3 6h3.5c1.3 0 2.5.7 3.2 1.8l4.6 8.4c.7 1.1 1.9 1.8 3.2 1.8H21" />
+      <path d="M17.5 15l3.5 3-3.5 3" />
+      <path d="M3 18h3.5c1.3 0 2.5-.7 3.2-1.8l1-1.8" />
+      <path d="M14.3 8.8l1-1.8C16 5.7 17.2 5 18.5 5H21" />
+      <path d="M17.5 3l3.5 3-3.5 3" />
+    </svg>
+  )
+}
+
+export function IconX({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M6 6l12 12M18 6L6 18" />
+    </svg>
+  )
+}

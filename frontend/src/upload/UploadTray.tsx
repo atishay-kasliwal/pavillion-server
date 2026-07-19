@@ -2,14 +2,14 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUploadQueue } from './UploadQueueContext'
 import { destinationLabel, statusMeta } from './uploadMeta'
-import { IconChevronRight, IconUpload } from '../components/icons'
+import { IconChevronRight, IconUpload, IconX } from '../components/icons'
 import { formatBytes } from '../lib/format'
 
 // Persistent across every page — uploads started from a quick-add button on
 // Photos/Music/Files, or from Files' drag-and-drop, stay visible here even
 // after navigating away, instead of only showing progress on /upload.
 export function UploadTray() {
-  const { rows, summary, retry } = useUploadQueue()
+  const { rows, summary, retry, clearCompleted } = useUploadQueue()
   const [expanded, setExpanded] = useState(false)
   const navigate = useNavigate()
 
@@ -92,6 +92,22 @@ export function UploadTray() {
         </div>
         <IconChevronRight className={`upload-tray-chevron${expanded ? ' open' : ''}`} />
       </button>
+
+      {/* Only lets you dismiss finished work — active uploads keep the tray
+          visible, since there's nothing to hide that isn't still running. */}
+      {summary.active === 0 ? (
+        <button
+          className="upload-tray-close"
+          onClick={(e) => {
+            e.stopPropagation()
+            clearCompleted()
+          }}
+          aria-label="Dismiss"
+          title="Dismiss"
+        >
+          <IconX />
+        </button>
+      ) : null}
     </div>
   )
 }

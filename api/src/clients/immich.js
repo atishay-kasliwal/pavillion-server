@@ -2,14 +2,29 @@ import { config } from '../config.js';
 
 const { baseUrl, apiKey } = config.immich;
 
-async function immichFetch(path, options = {}) {
-  const res = await fetch(`${baseUrl}${path}`, {
-    ...options,
-    headers: {
-      'x-api-key': apiKey,
-      ...options.headers,
-    },
-  });
+async function immichFetch(path, options = {}, attempt = 1) {
+  let res;
+  try {
+    res = await fetch(`${baseUrl}${path}`, {
+      ...options,
+      headers: {
+        'x-api-key': apiKey,
+        ...options.headers,
+      },
+    });
+  } catch (err) {
+    // Immich's HTTP server occasionally resets a connection under a burst
+    // of near-simultaneous requests (seen live: ECONNRESET, low frequency,
+    // not a crash) — retry once after a brief pause instead of surfacing a
+    // transient network blip as a 500. A retried upload is still safe:
+    // Immich dedupes by checksum, so a redundant attempt just comes back
+    // as status: 'duplicate' rather than storing the file twice.
+    if (attempt < 2) {
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      return immichFetch(path, options, attempt + 1);
+    }
+    throw err;
+  }
   if (!res.ok) {
     throw new Error(`Immich ${options.method ?? 'GET'} ${path} -> ${res.status}`);
   }

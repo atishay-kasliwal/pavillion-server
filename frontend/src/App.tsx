@@ -35,6 +35,7 @@ export function App() {
     <div className="shell">
       <header className="topbar">
         <div className="brand">Pavillion</div>
+        <MiniPlayer />
         <div className="topbar-right">
           {storage.data ? (
             <span
@@ -64,8 +65,6 @@ export function App() {
       <main className="main">
         <Outlet />
       </main>
-
-      <MiniPlayer />
 
       <nav className="bottom-nav">
         {NAV.map((n) => (

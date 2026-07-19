@@ -17,6 +17,7 @@ type PlayerState = {
   playing: boolean
   position: number
   duration: number
+  shuffle: boolean
 }
 
 type PlayerApi = PlayerState & {
@@ -28,6 +29,7 @@ type PlayerApi = PlayerState & {
   seek: (seconds: number) => void
   stop: () => void
   purgeIds: (ids: string[]) => void
+  toggleShuffle: () => void
 }
 
 const PlayerContext = createContext<PlayerApi | null>(null)
@@ -46,6 +48,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     playing: false,
     position: 0,
     duration: 0,
+    shuffle: false,
   })
 
   if (audioRef.current === null && typeof Audio !== 'undefined') {
@@ -81,7 +84,17 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const step = useCallback(
     (delta: number) => {
       setState((s) => {
-        const nextIndex = s.index + delta
+        // Shuffle only affects "next" — a plain random jump each time
+        // rather than a precomputed permutation, which is simple and good
+        // enough for a personal music library. "Previous" stays sequential.
+        let nextIndex: number
+        if (s.shuffle && delta > 0 && s.queue.length > 1) {
+          do {
+            nextIndex = Math.floor(Math.random() * s.queue.length)
+          } while (nextIndex === s.index)
+        } else {
+          nextIndex = s.index + delta
+        }
         const song = s.queue[nextIndex]
         if (!song) return s
         loadAndPlay(song)
@@ -93,6 +106,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const next = useCallback(() => step(1), [step])
   const prev = useCallback(() => step(-1), [step])
+
+  const toggleShuffle = useCallback(() => {
+    setState((s) => ({ ...s, shuffle: !s.shuffle }))
+  }, [])
 
   const seek = useCallback((seconds: number) => {
     const audio = audioRef.current
@@ -106,7 +123,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       audio.removeAttribute('src')
       audio.load()
     }
-    setState({ queue: [], index: -1, playing: false, position: 0, duration: 0 })
+    setState((s) => ({ queue: [], index: -1, playing: false, position: 0, duration: 0, shuffle: s.shuffle }))
   }, [])
 
   // After a Navidrome rename the old id is dead — drop it from the queue,
@@ -164,8 +181,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       seek,
       stop,
       purgeIds,
+      toggleShuffle,
     }),
-    [state, current, playQueue, toggle, next, prev, seek, stop, purgeIds],
+    [state, current, playQueue, toggle, next, prev, seek, stop, purgeIds, toggleShuffle],
   )
 
   return <PlayerContext.Provider value={api}>{children}</PlayerContext.Provider>

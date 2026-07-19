@@ -133,16 +133,122 @@ a:focus-visible,
   z-index: 40;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 16px;
   height: var(--topbar-h);
   padding: 0 20px;
   background: oklch(0.11 0.005 260 / 0.72);
   backdrop-filter: blur(20px) saturate(1.5);
   -webkit-backdrop-filter: blur(20px) saturate(1.5);
   border-bottom: 1px solid var(--border);
+  overflow: hidden;
+}
+
+/* ---------- Player, embedded in the topbar (see MiniPlayer.tsx) ---------- */
+
+.topbar-player {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.ctrl-icon {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dim);
+  transition: background 0.15s var(--ease), color 0.15s var(--ease),
+    transform 0.1s var(--ease-spring);
+}
+.ctrl-icon svg {
+  width: 16px;
+  height: 16px;
+}
+.ctrl-icon:hover {
+  background: var(--surface-hover);
+  color: var(--text-strong);
+}
+.ctrl-icon:active {
+  transform: scale(0.9);
+}
+.ctrl-icon.active {
+  color: var(--accent-soft);
+}
+.ctrl-icon.play {
+  width: 32px;
+  height: 32px;
+  background: var(--text-strong);
+  color: var(--bg-deep);
+}
+.ctrl-icon.play svg {
+  width: 15px;
+  height: 15px;
+}
+.ctrl-icon.play:hover {
+  background: #fff;
+}
+
+.topbar-player-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-strong);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+  margin: 0 4px;
+}
+
+/* Thin draggable strip along the topbar's bottom edge instead of a full
+   seek row — keeps the whole player compact enough to live in the topbar. */
+.topbar-seek-input {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  width: 100%;
+  height: 14px;
+  margin: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+.topbar-seek-input::-webkit-slider-runnable-track {
+  height: 3px;
+  background: var(--border-hover);
+}
+.topbar-seek-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  box-shadow: 0 1px 3px oklch(0 0 0 / 0.5);
+  margin-top: -4px;
+}
+.topbar-seek-input::-moz-range-track {
+  height: 3px;
+  background: var(--border-hover);
+}
+.topbar-seek-input::-moz-range-thumb {
+  width: 11px;
+  height: 11px;
+  border: none;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  box-shadow: 0 1px 3px oklch(0 0 0 / 0.5);
 }
 
 .brand {
+  flex-shrink: 0;
   font-family: var(--font-display);
   font-size: 1.15rem;
   font-weight: 800;
@@ -157,6 +263,8 @@ a:focus-visible,
   display: flex;
   align-items: center;
   gap: 14px;
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
 .topbar-icon {
@@ -195,7 +303,7 @@ a:focus-visible,
 }
 
 .main {
-  padding: 20px 24px calc(var(--navbar-clearance) + var(--player-h) + 24px);
+  padding: 20px 24px calc(var(--navbar-clearance) + 24px);
 }
 
 /* Floating glass pill tab bar — detached from the edge, not a full-width
@@ -1396,7 +1504,7 @@ a:focus-visible,
 
 .toast-stack {
   position: fixed;
-  bottom: calc(var(--navbar-clearance) + var(--player-h) + 20px);
+  bottom: calc(var(--navbar-clearance) + 20px);
   right: 20px;
   z-index: 150;
   display: flex;
@@ -1405,14 +1513,13 @@ a:focus-visible,
   max-width: 320px;
 }
 
-/* ---------- Global upload tray — bottom-left, mirrors the toast stack's
-   offset so it clears the mini-player/nav pill the same way ---------- */
+/* ---------- Global upload tray — centered above the nav pill ---------- */
 
 .upload-tray {
   position: fixed;
   left: 50%;
   transform: translateX(-50%);
-  bottom: calc(var(--navbar-clearance) + var(--player-h) + 10px);
+  bottom: calc(var(--navbar-clearance) + 10px);
   z-index: 140;
   width: min(340px, calc(100vw - 40px));
 }
@@ -1515,6 +1622,30 @@ a:focus-visible,
 .upload-tray-row .upload-status {
   flex-shrink: 0;
 }
+.upload-tray-close {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-active);
+  border: 1px solid var(--border-hover);
+  color: var(--text-dim);
+  box-shadow: var(--shadow-sm);
+}
+.upload-tray-close svg {
+  width: 11px;
+  height: 11px;
+}
+.upload-tray-close:hover {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
+}
 .toast {
   background: oklch(0.18 0.006 260 / 0.85);
   backdrop-filter: blur(20px) saturate(1.5);
@@ -1581,14 +1712,16 @@ a:focus-visible,
 
 @media (max-width: 760px) {
   .main {
-    padding: 16px 14px calc(var(--navbar-clearance) + var(--player-h) + 20px);
+    padding: 16px 14px calc(var(--navbar-clearance) + 20px);
   }
-  .mini-player .track-info {
-    width: auto;
-    flex: 1;
-  }
-  .mini-player .seek {
+  /* Icons only — the track name loses the fight for space against
+     brand + status/logout on a phone-width topbar. */
+  .topbar-player-name {
     display: none;
+  }
+  .topbar {
+    padding: 0 12px;
+    gap: 8px;
   }
   .media-grid {
     grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
@@ -1598,13 +1731,13 @@ a:focus-visible,
     left: 12px;
     right: 12px;
     max-width: none;
-    bottom: calc(var(--navbar-clearance) + var(--player-h) + 12px);
+    bottom: calc(var(--navbar-clearance) + 12px);
   }
   .upload-tray {
     left: 50%;
     transform: translateX(-50%);
     width: min(340px, calc(100vw - 24px));
-    bottom: calc(var(--navbar-clearance) + var(--player-h) + 10px);
+    bottom: calc(var(--navbar-clearance) + 10px);
   }
   .files-layout {
     flex-direction: column;

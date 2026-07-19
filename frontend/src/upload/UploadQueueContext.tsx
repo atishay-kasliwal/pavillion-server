@@ -2,6 +2,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -208,7 +209,6 @@ export function UploadQueueProvider({ children }: { children: ReactNode }) {
     setRowsState((rs) => rs.filter((r) => r.status === 'queued' || r.status === 'uploading'))
   }, [setRowsState])
 
-  const prevActiveRef = useRef(0)
   const summary = useMemo<UploadSummary>(() => {
     const total = rows.length
     const done = rows.filter((r) => r.status === 'done' || r.status === 'duplicate').length
@@ -217,23 +217,34 @@ export function UploadQueueProvider({ children }: { children: ReactNode }) {
     ).length
     const active = rows.filter((r) => r.status === 'queued' || r.status === 'uploading').length
     const settled = total - active
-
-    // Fire a single toast the moment a batch finishes settling, regardless
-    // of which page/button started it.
-    if (prevActiveRef.current > 0 && active === 0 && total > 0) {
-      pushToast(
-        failed > 0
-          ? `Upload finished — ${done} done, ${failed} failed`
-          : done === 1
-            ? 'Uploaded 1 file'
-            : `Uploaded ${done} files`,
-        failed > 0 ? 'error' : 'success',
-      )
-    }
-    prevActiveRef.current = active
-
     return { total, done, failed, active, percent: total === 0 ? 0 : (settled / total) * 100 }
   }, [rows])
+
+  const prevActiveRef = useRef(0)
+  useEffect(() => {
+    const wasActive = prevActiveRef.current > 0
+    prevActiveRef.current = summary.active
+
+    if (!wasActive || summary.active > 0 || summary.total === 0) return
+
+    // A batch just finished settling, regardless of which page/button
+    // started it — one toast, and if nothing failed, clear the tray on its
+    // own shortly after so it doesn't just sit there once there's nothing
+    // left to do.
+    pushToast(
+      summary.failed > 0
+        ? `Upload finished — ${summary.done} done, ${summary.failed} failed`
+        : summary.done === 1
+          ? 'Uploaded 1 file'
+          : `Uploaded ${summary.done} files`,
+      summary.failed > 0 ? 'error' : 'success',
+    )
+
+    if (summary.failed === 0) {
+      const timer = setTimeout(() => clearCompleted(), 2500)
+      return () => clearTimeout(timer)
+    }
+  }, [summary.active, summary.total, summary.done, summary.failed, clearCompleted])
 
   const api = useMemo<UploadQueueApi>(
     () => ({ rows, summary, addFiles, retry, renameAndRetry, clearCompleted }),
