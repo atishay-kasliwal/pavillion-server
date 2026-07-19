@@ -9,10 +9,6 @@ import { uploadRouter } from './routes/upload.js';
 import { mediaRouter } from './routes/media.js';
 import { browseRouter } from './routes/browse.js';
 import { manageRouter } from './routes/manage.js';
-import { takeoutRouter } from './routes/takeout.js';
-import { ensureRootDirsExist } from './clients/takeout.js';
-
-ensureRootDirsExist();
 
 const app = express();
 
@@ -43,7 +39,6 @@ app.use('/api', uploadRouter);
 app.use('/api', mediaRouter);
 app.use('/api', browseRouter);
 app.use('/api', manageRouter);
-app.use('/api', takeoutRouter);
 
 // Serve the built SPA (frontend/ builds into api/public) same-origin, so
 // one hostname and one Access session cover both UI and API. Hashed

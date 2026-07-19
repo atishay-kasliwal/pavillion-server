@@ -69,36 +69,3 @@ export type UploadResult = {
   destination: Source
   [key: string]: unknown
 }
-
-export type TakeoutRunStats = {
-  imported: number
-  duplicates: number
-  missingMetadata: number
-  errors: number
-}
-
-export type TakeoutRun = {
-  startedAt: string
-  finishedAt: string
-  status: 'success' | 'error'
-  stats: TakeoutRunStats | null
-  errorMessage: string | null
-}
-
-export type TakeoutAccount = {
-  id: string
-  label: string
-  slug: string
-  createdAt: string
-  srcPath: string
-  destPath: string
-  status: 'idle' | 'running' | 'done' | 'error'
-  lastRun: TakeoutRun | null
-}
-
-export type TakeoutStatus = {
-  status: 'idle' | 'running' | 'done' | 'error'
-  log: string[]
-  startedAt?: string
-  lastRun: TakeoutRun | null
-}

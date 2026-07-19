@@ -5,7 +5,6 @@ import { SessionExpiredGate } from './components/SessionExpiredGate'
 import { ToastStack } from './components/ToastStack'
 import {
   IconAlbums,
-  IconCloudDown,
   IconFolder,
   IconMusic,
   IconPhoto,
@@ -20,7 +19,6 @@ const NAV = [
   { to: '/files', label: 'Files', icon: IconFolder },
   { to: '/search', label: 'Search', icon: IconSearch },
   { to: '/upload', label: 'Upload', icon: IconUpload },
-  { to: '/takeout', label: 'Import', icon: IconCloudDown },
 ]
 
 export function App() {

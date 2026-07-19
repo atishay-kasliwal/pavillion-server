@@ -7,8 +7,6 @@ import type {
   FolderListing,
   ImmichAlbum,
   SearchResponse,
-  TakeoutAccount,
-  TakeoutStatus,
   TimelinePage,
   UploadResult,
 } from './types'
@@ -107,21 +105,3 @@ export const moveFile = (path: string, destination: string) =>
     `/api/filebrowser/${fbPath(path)}`,
     json('PATCH', { destination }),
   )
-
-// Google Photos Takeout import
-export const takeoutAccounts = () =>
-  request<{ accounts: TakeoutAccount[] }>('/api/takeout/accounts')
-
-export const createTakeoutAccount = (label: string) =>
-  request<TakeoutAccount>('/api/takeout/accounts', json('POST', { label }))
-
-export const deleteTakeoutAccount = (id: string) =>
-  request<void>(`/api/takeout/accounts/${encodeURIComponent(id)}`, { method: 'DELETE' })
-
-export const runTakeoutImport = (id: string) =>
-  request<{ status: 'running' }>(`/api/takeout/accounts/${encodeURIComponent(id)}/run`, {
-    method: 'POST',
-  })
-
-export const takeoutStatus = (id: string) =>
-  request<TakeoutStatus>(`/api/takeout/accounts/${encodeURIComponent(id)}/status`)

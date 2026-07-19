@@ -150,37 +150,3 @@ export function useMoveFile() {
     },
   })
 }
-
-export function useCreateTakeoutAccount() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (label: string) => api.createTakeoutAccount(label),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['takeoutAccounts'] })
-      pushToast('Account added')
-    },
-  })
-}
-
-export function useDeleteTakeoutAccount() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (id: string) => api.deleteTakeoutAccount(id),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['takeoutAccounts'] })
-      pushToast('Account removed')
-    },
-  })
-}
-
-export function useRunTakeoutImport() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (id: string) => api.runTakeoutImport(id),
-    onSuccess: (_, id) => {
-      void qc.invalidateQueries({ queryKey: ['takeoutAccounts'] })
-      void qc.invalidateQueries({ queryKey: ['takeoutStatus', id] })
-      pushToast('Import started')
-    },
-  })
-}

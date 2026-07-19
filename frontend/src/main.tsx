@@ -15,7 +15,6 @@ import { MusicAlbumPage } from './routes/MusicAlbumPage'
 import { FilesPage } from './routes/FilesPage'
 import { SearchPage } from './routes/SearchPage'
 import { UploadPage } from './routes/UploadPage'
-import { TakeoutPage } from './routes/TakeoutPage'
 import './styles/global.css'
 
 const queryClient = new QueryClient({
@@ -47,7 +46,6 @@ const router = createBrowserRouter([
       { path: 'files', element: <FilesPage /> },
       { path: 'search', element: <SearchPage /> },
       { path: 'upload', element: <UploadPage /> },
-      { path: 'takeout', element: <TakeoutPage /> },
     ],
   },
 ])

@@ -149,12 +149,3 @@ export function IconCalendar({ className }: IconProps) {
     </svg>
   )
 }
-
-export function IconCloudDown({ className }: IconProps) {
-  return (
-    <svg {...base} className={className}>
-      <path d="M7 18h10a4 4 0 0 0 .5-7.97 5.5 5.5 0 0 0-10.6-1.5A4.5 4.5 0 0 0 7 18z" />
-      <path d="M12 10v7M9 14.5l3 3 3-3" />
-    </svg>
-  )
-}

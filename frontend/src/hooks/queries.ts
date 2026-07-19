@@ -100,18 +100,3 @@ export function useSearch(q: string) {
     enabled: q.trim().length > 0,
   })
 }
-
-export function useTakeoutAccounts() {
-  return useQuery({ queryKey: ['takeoutAccounts'], queryFn: api.takeoutAccounts })
-}
-
-// Polls only while a run is in flight for this account — the caller passes
-// the account's last-known status so polling stops the moment it settles.
-export function useTakeoutStatus(id: string, isRunning: boolean) {
-  return useQuery({
-    queryKey: ['takeoutStatus', id],
-    queryFn: () => api.takeoutStatus(id),
-    enabled: isRunning,
-    refetchInterval: isRunning ? 2_000 : false,
-  })
-}

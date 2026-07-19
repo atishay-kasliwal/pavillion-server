@@ -1149,69 +1149,6 @@ a:focus-visible,
   color: var(--red);
 }
 
-/* ---------- Takeout import ---------- */
-
-.takeout-card {
-  padding: 16px 18px;
-  margin-bottom: 10px;
-}
-.takeout-card-head {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.takeout-card-head .row-main {
-  min-width: 0;
-}
-.takeout-status-badge {
-  font-size: 0.68rem;
-  font-family: var(--font-mono);
-  padding: 3px 9px;
-  border-radius: 6px;
-  border: 1px solid var(--border-hover);
-  color: var(--text-dim);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  flex-shrink: 0;
-}
-.takeout-status-badge.running {
-  color: var(--accent-soft);
-  border-color: var(--accent-soft);
-}
-.takeout-status-badge.done {
-  color: var(--green);
-  border-color: var(--green);
-}
-.takeout-status-badge.error {
-  color: var(--red);
-  border-color: var(--red);
-}
-.takeout-path {
-  font-family: var(--font-mono);
-  font-size: 0.78rem;
-  color: var(--text-dim);
-  background: var(--input-bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 8px 12px;
-  margin-top: 10px;
-  overflow-x: auto;
-  white-space: nowrap;
-}
-.takeout-log {
-  font-family: var(--font-mono);
-  font-size: 0.76rem;
-  color: var(--text-dim);
-  background: var(--bg-deep);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 10px 12px;
-  margin-top: 10px;
-  max-height: 220px;
-  overflow-y: auto;
-  white-space: pre-wrap;
-}
-
 /* ---------- Toasts ---------- */
 
 .toast-stack {
