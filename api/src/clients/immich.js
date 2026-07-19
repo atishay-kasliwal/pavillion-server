@@ -3,25 +3,29 @@ import { config } from '../config.js';
 
 const { baseUrl, apiKey } = config.immich;
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 async function immichFetch(path, options = {}, attempt = 1) {
+  // Callers whose body can't be replayed (uploadToImmich streams a one-shot
+  // disk-backed Blob) pass noRetry and own their retry loop instead — a retry
+  // here would re-send an already-consumed body.
+  const { noRetry, ...fetchOptions } = options;
   let res;
   try {
     res = await fetch(`${baseUrl}${path}`, {
-      ...options,
+      ...fetchOptions,
       headers: {
         'x-api-key': apiKey,
-        ...options.headers,
+        ...fetchOptions.headers,
       },
     });
   } catch (err) {
     // Immich's HTTP server occasionally resets a connection under a burst
     // of near-simultaneous requests (seen live: ECONNRESET, low frequency,
     // not a crash) — retry once after a brief pause instead of surfacing a
-    // transient network blip as a 500. A retried upload is still safe:
-    // Immich dedupes by checksum, so a redundant attempt just comes back
-    // as status: 'duplicate' rather than storing the file twice.
-    if (attempt < 2) {
-      await new Promise((resolve) => setTimeout(resolve, 200));
+    // transient network blip as a 500.
+    if (attempt < 2 && !noRetry) {
+      await sleep(200);
       return immichFetch(path, options, attempt + 1);
     }
     throw err;
@@ -153,21 +157,55 @@ export async function removeImmichAlbumAssets(albumId, assetIds) {
   });
 }
 
-export async function uploadToImmich(file) {
-  const form = new FormData();
-  // openAsBlob returns a Blob backed by the spooled temp file on disk, read
-  // lazily as undici streams the multipart body — so a large video is never
-  // pulled fully into memory (which used to OOM-kill this container on files
-  // in the ~100 MB range; see routes/upload.js).
-  const blob = await openAsBlob(file.path, { type: file.mimetype });
-  form.append('assetData', blob, file.originalname);
-  form.append('deviceAssetId', `pavillion-api-${Date.now()}-${file.originalname}`);
-  form.append('deviceId', 'pavillion-archive-api');
-  form.append('fileCreatedAt', new Date().toISOString());
-  form.append('fileModifiedAt', new Date().toISOString());
+// A large upload batch can briefly knock Immich over — its ffmpeg thumbnail
+// jobs get OOM-killed, it thrashes and restarts, and for a few seconds the
+// API sees ECONNREFUSED (port not listening) or a headers timeout (alive but
+// too slow). Seen live: a 1000+ file batch where every queued upload came
+// back 500 during those windows. Retry with backoff long enough to ride out
+// a restart instead of failing the file permanently. Safe to replay: Immich
+// dedupes by checksum, so a redundant attempt returns status 'duplicate'
+// rather than storing the bytes twice. The body (a disk-backed Blob) can't be
+// reused once undici has consumed it, so each attempt rebuilds the FormData
+// from the still-present temp file.
+const UPLOAD_RETRY_DELAYS_MS = [1000, 3000, 8000];
 
-  const res = await immichFetch('/api/assets', { method: 'POST', body: form });
-  return res.json();
+function isTransientUploadError(err) {
+  const cause = err?.cause;
+  const code = cause?.code ?? err?.code;
+  if (code === 'ECONNREFUSED' || code === 'ECONNRESET' || code === 'UND_ERR_HEADERS_TIMEOUT') {
+    return true;
+  }
+  // A 5xx from Immich itself (overloaded, restarting) is also worth retrying;
+  // a 4xx (e.g. a rejected/unsupported file) is not and should surface.
+  const status = Number(/-> (\d{3})$/.exec(err?.message ?? '')?.[1]);
+  return status >= 500 && status < 600;
+}
+
+export async function uploadToImmich(file) {
+  for (let attempt = 0; ; attempt++) {
+    const form = new FormData();
+    // openAsBlob returns a Blob backed by the spooled temp file on disk, read
+    // lazily as undici streams the multipart body — so a large video is never
+    // pulled fully into memory (which used to OOM-kill this container on files
+    // in the ~100 MB range; see routes/upload.js).
+    const blob = await openAsBlob(file.path, { type: file.mimetype });
+    form.append('assetData', blob, file.originalname);
+    form.append('deviceAssetId', `pavillion-api-${Date.now()}-${file.originalname}`);
+    form.append('deviceId', 'pavillion-archive-api');
+    form.append('fileCreatedAt', new Date().toISOString());
+    form.append('fileModifiedAt', new Date().toISOString());
+
+    try {
+      const res = await immichFetch('/api/assets', { method: 'POST', body: form, noRetry: true });
+      return res.json();
+    } catch (err) {
+      if (attempt < UPLOAD_RETRY_DELAYS_MS.length && isTransientUploadError(err)) {
+        await sleep(UPLOAD_RETRY_DELAYS_MS[attempt]);
+        continue;
+      }
+      throw err;
+    }
+  }
 }
 
 // Diagnostic only (see routes/system.js) — GET /api/assets/:id returns the
