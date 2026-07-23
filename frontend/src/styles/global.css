@@ -147,46 +147,85 @@ a:focus-visible,
 
 /* ---------- Player, embedded in the topbar (see MiniPlayer.tsx) ---------- */
 
-/* A compact, self-contained player centered in the topbar: a transport row
-   with its own seek bar beneath. Auto margins center it between the brand and
-   the right-hand controls; max-width keeps a long track name from pushing
-   everything else out. It's a column now (controls over seek), so it needs a
-   little vertical room — the seek bar overhangs the topbar's bottom edge. */
+/* A compact, self-contained player: a transport row with its own seek bar
+   beneath. Absolutely centered in the topbar (translateX(-50%)) so the wider
+   right-hand controls don't shove it off-center — flex auto-margins couldn't,
+   since they only balance the leftover space. It's a column (controls over
+   seek), centered vertically in the bar. */
 .topbar-player {
-  min-width: 0;
-  width: min(460px, 42vw);
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   margin: 0 auto;
+  width: min(560px, 52vw);
+  flex: 0 1 min(560px, 52vw);
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) auto minmax(0, 1fr);
+  grid-template-areas: 'meta controls seek';
+  align-items: center;
+  gap: 10px;
+  padding: 0 2px;
+  border-radius: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.topbar-player-meta {
+  grid-area: meta;
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 3px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.topbar-player-track {
+  min-width: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.topbar-player-badge {
+  display: none;
 }
 
 .topbar-player-controls {
+  grid-area: controls;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
+  justify-content: flex-start;
+  gap: 4px;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .ctrl-icon {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   flex-shrink: 0;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--text-dim);
+  background: oklch(1 0 0 / 0.02);
+  border: 1px solid transparent;
   transition: background 0.15s var(--ease), color 0.15s var(--ease),
-    transform 0.1s var(--ease-spring);
+    transform 0.1s var(--ease-spring), border-color 0.15s var(--ease);
 }
 .ctrl-icon svg {
-  width: 16px;
-  height: 16px;
+  width: 15px;
+  height: 15px;
 }
 .ctrl-icon:hover {
-  background: var(--surface-hover);
+  background: oklch(1 0 0 / 0.08);
+  border-color: oklch(1 0 0 / 0.08);
   color: var(--text-strong);
 }
 .ctrl-icon:active {
@@ -198,26 +237,34 @@ a:focus-visible,
 .ctrl-icon.play {
   width: 32px;
   height: 32px;
-  background: var(--text-strong);
+  background: linear-gradient(180deg, #fff, oklch(0.94 0 0));
   color: var(--bg-deep);
+  box-shadow:
+    0 4px 14px oklch(0 0 0 / 0.28),
+    0 0 0 1px oklch(1 0 0 / 0.06);
 }
 .ctrl-icon.play svg {
-  width: 15px;
-  height: 15px;
+  width: 14px;
+  height: 14px;
 }
 .ctrl-icon.play:hover {
-  background: #fff;
+  background: linear-gradient(180deg, #fff, oklch(0.98 0 0));
+}
+.ctrl-icon-close {
+  width: 24px;
+  height: 24px;
+  margin-top: 0;
 }
 
 .topbar-player-name {
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: 700;
+  line-height: 1.1;
   color: var(--text-strong);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 220px;
-  margin: 0 4px;
 }
 
 /* Seek row: elapsed / duration flanking a contained progress bar. The bar
@@ -225,17 +272,20 @@ a:focus-visible,
    nothing overlays it and the whole thing is grabbable — the earlier bug was
    the transport buttons sitting on top of a full-width invisible slider. */
 .topbar-seek {
+  grid-area: seek;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 9px;
+  padding: 0 2px 0 0;
+  min-width: 0;
 }
 .topbar-seek-time {
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.01em;
   color: var(--text-muted);
   flex-shrink: 0;
-  min-width: 32px;
+  min-width: 26px;
   text-align: center;
 }
 /* The bar is a group where a subtle track, an accent fill, and the (visually
@@ -245,9 +295,10 @@ a:focus-visible,
 .topbar-seek-bar {
   position: relative;
   flex: 1;
-  height: 16px;
+  height: 14px;
   display: flex;
   align-items: center;
+  min-width: 0;
 }
 .topbar-seek-bar::before {
   content: '';
@@ -256,7 +307,7 @@ a:focus-visible,
   right: 0;
   height: 4px;
   border-radius: 999px;
-  background: oklch(1 0 0 / 0.14);
+  background: oklch(1 0 0 / 0.12);
   pointer-events: none;
 }
 .topbar-seek-fill {
@@ -266,13 +317,14 @@ a:focus-visible,
   border-radius: 999px;
   background: linear-gradient(90deg, var(--accent-soft), var(--accent));
   pointer-events: none;
+  box-shadow: 0 0 14px oklch(0.66 0.19 255 / 0.22);
 }
 .topbar-seek-input {
   position: absolute;
   left: 0;
   right: 0;
   width: 100%;
-  height: 16px;
+  height: 14px;
   margin: 0;
   -webkit-appearance: none;
   appearance: none;
@@ -281,18 +333,20 @@ a:focus-visible,
   touch-action: none;
 }
 .topbar-seek-input::-webkit-slider-runnable-track {
-  height: 16px;
+  height: 14px;
   background: transparent;
 }
 .topbar-seek-input::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 12px;
-  height: 12px;
-  margin-top: 2px;
+  width: 11px;
+  height: 11px;
+  margin-top: 1px;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 1px 5px oklch(0 0 0 / 0.6);
+  box-shadow:
+    0 1px 5px oklch(0 0 0 / 0.6),
+    0 0 0 3px oklch(0.66 0.19 255 / 0.12);
   /* Hidden at rest so the bar reads as a clean line; appears on interaction. */
   opacity: 0;
   transform: scale(0.6);
@@ -305,16 +359,18 @@ a:focus-visible,
   transform: scale(1);
 }
 .topbar-seek-input::-moz-range-track {
-  height: 16px;
+  height: 14px;
   background: transparent;
 }
 .topbar-seek-input::-moz-range-thumb {
-  width: 12px;
-  height: 12px;
+  width: 11px;
+  height: 11px;
   border: none;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 1px 5px oklch(0 0 0 / 0.6);
+  box-shadow:
+    0 1px 5px oklch(0 0 0 / 0.6),
+    0 0 0 3px oklch(0.66 0.19 255 / 0.12);
   opacity: 0;
   transition: opacity 0.14s var(--ease);
 }
@@ -341,6 +397,7 @@ a:focus-visible,
   gap: 14px;
   flex-shrink: 0;
   margin-left: auto;
+  min-width: 0;
 }
 
 .topbar-icon {
@@ -854,9 +911,53 @@ a:focus-visible,
 /* ---------- Rows (music/files/search) ---------- */
 
 .row-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 8px;
+  align-content: start;
+}
+
+.music-section {
+  margin: 18px 0 16px;
+  padding-top: 0;
+}
+
+.music-section-head {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.music-section-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--accent-soft);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.music-section-note {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.recent-row-list {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 8px;
+}
+
+.music-divider {
+  height: 1px;
+  margin: 18px 0 16px;
+  background: linear-gradient(90deg, transparent, oklch(1 0 0 / 0.16), transparent);
 }
 
 .row {
@@ -867,6 +968,8 @@ a:focus-visible,
   border-radius: var(--radius-sm);
   transition: background 0.15s var(--ease), transform 0.1s var(--ease-spring);
   cursor: pointer;
+  min-height: 64px;
+  height: 100%;
 }
 .row:active {
   transform: scale(0.994);
@@ -1813,11 +1916,22 @@ a:focus-visible,
   .topbar-player-name {
     display: none;
   }
+  .topbar-player-badge {
+    display: none;
+  }
   .topbar-seek-time {
     display: none;
   }
   .topbar-player {
-    width: min(300px, 52vw);
+    width: min(360px, calc(100vw - 132px));
+    padding: 9px 10px 8px;
+    gap: 6px;
+  }
+  .topbar-player-meta {
+    align-items: center;
+  }
+  .music-section-note {
+    display: none;
   }
   .topbar {
     padding: 0 12px;
@@ -1929,5 +2043,5 @@ a:focus-visible,
    status bar/notch otherwise. */
 .topbar {
   padding-top: env(safe-area-inset-top, 0px);
-  height: calc(var(--topbar-h) + env(safe-area-inset-top, 0px));
+  min-height: calc(var(--topbar-h) + env(safe-area-inset-top, 0px));
 }

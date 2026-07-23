@@ -81,8 +81,9 @@ export async function uploadToFilebrowser(file, destPath) {
   });
 }
 
-export async function fetchFilebrowserFile(path) {
-  return fbFetch(`/api/raw${path}`);
+export async function fetchFilebrowserFile(path, headers = {}) {
+  // Forward the client's Range header so media scrubbing works (see media.js).
+  return fbFetch(`/api/raw${path}`, { headers });
 }
 
 // Browse (not search) — list one directory's immediate contents.

@@ -1,40 +1,51 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { useArtists } from '../hooks/queries'
-import { randomSongs } from '../api/endpoints'
+import { useMusicSongs } from '../hooks/queries'
 import { usePlayer } from '../player/PlayerContext'
 import { pushToast } from '../lib/toast'
 import { QuickUploadButton } from '../components/QuickUploadButton'
 import { SkeletonRows } from '../components/Skeleton'
 import { EmptyState, ErrorBanner } from '../components/basics'
-import { IconShuffle } from '../components/icons'
+import { IconClock, IconShuffle } from '../components/icons'
+import { mediaUrl } from '../api/client'
+import { formatBytes } from '../lib/format'
 
 export function MusicPage() {
-  const artists = useArtists()
+  const songsQuery = useMusicSongs()
   const player = usePlayer()
   const [shuffling, setShuffling] = useState(false)
 
-  const hasMusic = (artists.data?.artists.length ?? 0) > 0
+  const songs = songsQuery.data?.songs ?? []
+  const hasMusic = songs.length > 0
+  const recentSongs = player.recent.slice(0, 21)
 
-  // Shuffle the whole library right from the Music tab — grab a random
-  // cross-library set and start playing immediately, with shuffle on so
-  // "next" keeps jumping around rather than marching through the fetched
-  // order.
+  const shuffleQueue = [...songs]
+  for (let i = shuffleQueue.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[shuffleQueue[i], shuffleQueue[j]] = [shuffleQueue[j], shuffleQueue[i]]
+  }
+
+  // Shuffle the whole library right from the Music tab using the full song
+  // list, then turn shuffle on so "next" keeps jumping around.
   const shuffleAll = async () => {
+    if (!songs.length) return
     setShuffling(true)
     try {
-      const { songs } = await randomSongs()
-      if (songs.length === 0) {
-        pushToast('No music to shuffle yet', 'error')
-        return
-      }
       if (!player.shuffle) player.toggleShuffle()
-      player.playQueue(songs, 0)
+      player.playQueue(shuffleQueue, 0)
     } catch {
       pushToast('Couldn’t start shuffle', 'error')
     } finally {
       setShuffling(false)
     }
+  }
+
+  const playSong = (songId: string) => {
+    const index = songs.findIndex((song) => song.id === songId)
+    const queue = index >= 0 ? songs : recentSongs
+    const queueIndex = index >= 0 ? index : queue.findIndex((song) => song.id === songId)
+    if (queue.length === 0) return
+    if (queueIndex < 0) return
+    player.playQueue(queue, queueIndex)
   }
 
   return (
@@ -52,25 +63,73 @@ export function MusicPage() {
         </div>
       </div>
 
-      {artists.isLoading ? <SkeletonRows /> : null}
-      {artists.isError ? <ErrorBanner>Couldn&apos;t load artists.</ErrorBanner> : null}
-      {artists.isSuccess && artists.data.artists.length === 0 ? (
+      {songsQuery.isLoading ? <SkeletonRows /> : null}
+      {songsQuery.isError ? <ErrorBanner>Couldn&apos;t load music.</ErrorBanner> : null}
+      {songsQuery.isSuccess && songs.length === 0 ? (
         <EmptyState>No music yet — upload some audio files!</EmptyState>
       ) : null}
 
+      {recentSongs.length > 0 ? (
+        <section className="music-section">
+          <div className="music-section-head">
+            <div className="music-section-kicker">
+              <IconClock className="btn-icon" />
+              Recently played
+            </div>
+          </div>
+          <div className="row-list recent-row-list">
+            {recentSongs.map((song) => {
+              const cover = mediaUrl(song.thumbnailUrl)
+              const isCurrent = player.current?.id === song.id
+              return (
+                <div key={`recent-${song.id}`} className="row" onClick={() => playSong(song.id)}>
+                  <div className="row-icon">{cover ? <img src={cover} alt="" /> : '🎵'}</div>
+                  <div className="row-main">
+                    <div
+                      className="row-name"
+                      style={isCurrent ? { color: 'var(--accent-soft)' } : undefined}
+                    >
+                      {isCurrent && player.playing ? '▸ ' : ''}
+                      {song.name}
+                    </div>
+                    <div className="row-sub">{formatBytes(song.size)}</div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </section>
+      ) : null}
+
+      {recentSongs.length > 0 ? <div className="music-divider" /> : null}
+
       <div className="row-list">
-        {artists.data?.artists.map((a) => (
-          <Link key={a.id} to={`/music/artist/${a.id}`} className="row">
-            <div className="row-icon">🎤</div>
-            <div className="row-main">
-              <div className="row-name">{a.name}</div>
-              <div className="row-sub">
-                {a.albumCount} {a.albumCount === 1 ? 'album' : 'albums'}
+        {songs.map((song, i) => {
+          const cover = mediaUrl(song.thumbnailUrl)
+          const isCurrent = player.current?.id === song.id
+          return (
+            <div key={song.id} className="row" onClick={() => player.playQueue(songs, i)}>
+              <div className="row-icon">{cover ? <img src={cover} alt="" /> : '🎵'}</div>
+              <div className="row-main">
+                <div
+                  className="row-name"
+                  style={isCurrent ? { color: 'var(--accent-soft)' } : undefined}
+                >
+                  {isCurrent && player.playing ? '▸ ' : ''}
+                  {song.name}
+                </div>
+                <div className="row-sub">{formatBytes(song.size)}</div>
               </div>
             </div>
-          </Link>
-        ))}
+          )
+        })}
       </div>
+      {hasMusic ? (
+        <div style={{ marginTop: 20, color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+          All tracks from the music library are shown here directly. Use Shuffle all to
+          start a full-library random queue.
+        </div>
+      ) : null}
     </div>
   )
 }

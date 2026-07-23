@@ -1,6 +1,8 @@
 import { usePlayer } from './PlayerContext'
 import { formatDuration } from '../lib/format'
 import {
+  IconBack10,
+  IconForward10,
   IconPause,
   IconPlay,
   IconShuffle,
@@ -23,6 +25,21 @@ export function MiniPlayer() {
 
   return (
     <div className="topbar-player">
+      <div className="topbar-player-meta">
+        <div className="topbar-player-track">
+          <span className="topbar-player-badge">Now playing</span>
+          <span className="topbar-player-name">{current.name}</span>
+        </div>
+        <button
+          className="ctrl-icon ctrl-icon-close"
+          onClick={player.stop}
+          title="Close player"
+          aria-label="Close player"
+        >
+          <IconX />
+        </button>
+      </div>
+
       <div className="topbar-player-controls">
         <button
           className={`ctrl-icon${player.shuffle ? ' active' : ''}`}
@@ -37,6 +54,14 @@ export function MiniPlayer() {
           <IconSkipBack />
         </button>
         <button
+          className="ctrl-icon"
+          onClick={() => player.seekBy(-10)}
+          title="Back 10 seconds"
+          aria-label="Back 10 seconds"
+        >
+          <IconBack10 />
+        </button>
+        <button
           className="ctrl-icon play"
           onClick={player.toggle}
           title="Play/pause"
@@ -44,25 +69,22 @@ export function MiniPlayer() {
         >
           {player.playing ? <IconPause /> : <IconPlay />}
         </button>
-        <button className="ctrl-icon" onClick={player.next} title="Next" aria-label="Next">
-          <IconSkipForward />
-        </button>
-        <span className="topbar-player-name">{current.name}</span>
         <button
           className="ctrl-icon"
-          onClick={player.stop}
-          title="Close player"
-          aria-label="Close player"
+          onClick={() => player.seekBy(10)}
+          title="Forward 10 seconds"
+          aria-label="Forward 10 seconds"
         >
-          <IconX />
+          <IconForward10 />
+        </button>
+        <button className="ctrl-icon" onClick={player.next} title="Next" aria-label="Next">
+          <IconSkipForward />
         </button>
       </div>
 
       <div className="topbar-seek">
         <span className="topbar-seek-time">{formatDuration(player.position)}</span>
         <div className="topbar-seek-bar">
-          {/* A filled progress line under the input purely for looks — the
-              range input itself (transparent track) is what you actually drag. */}
           <div className="topbar-seek-fill" style={{ width: `${pct}%` }} />
           <input
             type="range"

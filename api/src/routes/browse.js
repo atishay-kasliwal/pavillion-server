@@ -4,6 +4,7 @@ import {
   listNavidromeArtists,
   listNavidromeArtistAlbums,
   listNavidromeAlbumSongs,
+  listNavidromeSongs,
   getNavidromeRandomSongs,
 } from '../clients/navidrome.js';
 import { listFilebrowserFolder, createFilebrowserFolder } from '../clients/filebrowser.js';
@@ -39,6 +40,14 @@ browseRouter.get('/browse/immich/albums/:id', async (req, res, next) => {
 browseRouter.get('/browse/navidrome/random', async (_req, res, next) => {
   try {
     res.json({ songs: await getNavidromeRandomSongs() });
+  } catch (err) {
+    next(err);
+  }
+});
+
+browseRouter.get('/browse/navidrome/songs', async (_req, res, next) => {
+  try {
+    res.json({ songs: await listNavidromeSongs() });
   } catch (err) {
     next(err);
   }

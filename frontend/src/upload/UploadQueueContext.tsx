@@ -164,6 +164,7 @@ export function UploadQueueProvider({ children }: { children: ReactNode }) {
       else if (dest === 'navidrome') {
         void qc.invalidateQueries({ queryKey: ['artists'] })
         void qc.invalidateQueries({ queryKey: ['albumSongs'] })
+        void qc.invalidateQueries({ queryKey: ['musicSongs'] })
       } else void qc.invalidateQueries({ queryKey: ['folder'] })
     },
     [qc],
