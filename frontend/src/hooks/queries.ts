@@ -47,10 +47,31 @@ export function useArtists() {
   return useQuery({ queryKey: ['artists'], queryFn: api.artists })
 }
 
+export function useMusicSongs() {
+  return useQuery({
+    queryKey: ['musicSongs'],
+    queryFn: api.musicSongs,
+  })
+}
+
 export function useArtistAlbums(id: string) {
   return useQuery({
     queryKey: ['artistAlbums', id],
     queryFn: () => api.artistAlbums(id),
+  })
+}
+
+export function useArtistSongs(id: string) {
+  return useQuery({
+    queryKey: ['artistSongs', id],
+    queryFn: async () => {
+      const { albums } = await api.artistAlbums(id)
+      const albumSongs = await Promise.all(albums.map((album) => api.albumSongs(album.id)))
+      return {
+        songs: albumSongs.flatMap((entry) => entry.songs),
+      }
+    },
+    enabled: id.length > 0,
   })
 }
 

@@ -34,7 +34,7 @@ export function App() {
   return (
     <div className="shell">
       <header className="topbar">
-        <div className="brand">Pavillion</div>
+        <div className="brand">Archive</div>
         <MiniPlayer />
         <div className="topbar-right">
           {storage.data ? (

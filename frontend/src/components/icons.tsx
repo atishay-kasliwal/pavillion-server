@@ -231,6 +231,28 @@ export function IconSkipForward({ className }: IconProps) {
   )
 }
 
+// Circular-arrow "jump back 10s" / "jump forward 10s" — the curved arrow with
+// a small 10 in the middle, matching the podcast/player convention.
+export function IconBack10({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M4 9a8 8 0 1 1-1.5 4.7" />
+      <path d="M4 4v5h5" />
+      <text x="12" y="15.5" textAnchor="middle" fontSize="7.5" fill="currentColor" stroke="none" fontWeight="700">10</text>
+    </svg>
+  )
+}
+
+export function IconForward10({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M20 9a8 8 0 1 0 1.5 4.7" />
+      <path d="M20 4v5h-5" />
+      <text x="12" y="15.5" textAnchor="middle" fontSize="7.5" fill="currentColor" stroke="none" fontWeight="700">10</text>
+    </svg>
+  )
+}
+
 export function IconShuffle({ className }: IconProps) {
   return (
     <svg {...base} className={className}>

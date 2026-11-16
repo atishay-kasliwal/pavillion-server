@@ -44,4 +44,13 @@ export const config = {
     passwordHash: process.env.APP_LOGIN_PASSWORD_HASH ?? '',
     sessionSecret: process.env.SESSION_SECRET ?? '',
   },
+
+  // Large uploads (>100 MB) can't go through Cloudflare (100 MB body cap), so
+  // they take a direct-to-box path over the tailnet instead (Tailscale HTTPS).
+  // That cross-domain request never carries the app-session cookie, so the
+  // upload route accepts this key in its place FOR UPLOADS ONLY. The key is
+  // baked into the public frontend bundle and is NOT a secret on its own — the
+  // real boundary is that the direct-upload origin is reachable only over the
+  // private tailnet (UFW-scoped to tailscale0). Blank disables the bypass.
+  directUploadKey: process.env.UPLOAD_DIRECT_KEY ?? '',
 };

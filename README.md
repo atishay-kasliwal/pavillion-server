@@ -78,6 +78,40 @@ rule) can be applied to Navidrome (4533) or Filebrowser (8091) later if
 native-app access to those is wanted too — nobody's asked for that yet,
 so it isn't done.
 
+### Uploading files over 100 MB
+
+Cloudflare's Free/Pro plans reject request bodies over 100 MB with a 413
+before they ever reach the tunnel, so a large video uploaded through the
+web app (`archive.atishaykasliwal.com`) fails at the edge. The app routes
+files over 100 MB to a **direct-upload origin** that skips Cloudflare —
+the box's own HTTPS name on the tailnet, served by `tailscale serve`.
+
+Set up (one-time):
+
+1. In the Tailscale admin console (Settings → DNS), enable **MagicDNS**
+   and **HTTPS Certificates** for the tailnet.
+2. On the box, expose the API over HTTPS on the tailnet:
+   ```
+   sudo tailscale serve --bg --https=443 http://127.0.0.1:8090
+   ```
+   This gives `https://<machine>.<tailnet>.ts.net` a real Let's Encrypt
+   cert, reachable only from your own tailnet devices.
+3. Pick any random string for the upload key and set it in **both** places
+   so they match:
+   - `docker/.env`: `UPLOAD_DIRECT_KEY=<random>`
+   - frontend build: `VITE_DIRECT_UPLOAD_ORIGIN=https://<machine>.<tailnet>.ts.net`
+     and `VITE_DIRECT_UPLOAD_KEY=<random>`
+4. Rebuild the frontend and the API container.
+
+That cross-domain upload can't send the app-session cookie (it belongs to
+`archive.…com`), so the `/api/upload` route accepts `X-Upload-Key` in its
+place — scoped to that one route only. The key isn't a real secret (it's
+in the public bundle); the actual boundary is that the direct origin is
+reachable only over the private tailnet. A device not on the tailnet just
+can't upload >100 MB files — they're flagged with a clear message instead
+of failing confusingly. Everything ≤100 MB always goes through Cloudflare
+as normal.
+
 ## The API
 
 `GET /api/search?q=...` — aggregates search across Immich (CLIP smart

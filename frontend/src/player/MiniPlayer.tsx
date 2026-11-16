@@ -1,5 +1,8 @@
 import { usePlayer } from './PlayerContext'
+import { formatDuration } from '../lib/format'
 import {
+  IconBack10,
+  IconForward10,
   IconPause,
   IconPlay,
   IconShuffle,
@@ -8,18 +11,36 @@ import {
   IconX,
 } from '../components/icons'
 
-// Lives inside the topbar rather than a bottom bar (see App.tsx) — the
-// track transport sits in the middle row, and the seek control is a thin
-// draggable strip along the topbar's bottom edge so it doesn't need its
-// own row of vertical space.
+// A compact, self-contained player that lives in the middle of the topbar:
+// a transport row with the seek bar directly beneath it (scoped to the
+// player's own width, not stretched across the whole topbar — so nothing
+// overlays the seek track and it's fully grabbable).
 export function MiniPlayer() {
   const player = usePlayer()
   const { current } = player
   if (!current) return null
 
+  const duration = player.duration || 0
+  const pct = duration > 0 ? (player.position / duration) * 100 : 0
+
   return (
-    <>
-      <div className="topbar-player">
+    <div className="topbar-player">
+      <div className="topbar-player-meta">
+        <div className="topbar-player-track">
+          <span className="topbar-player-badge">Now playing</span>
+          <span className="topbar-player-name">{current.name}</span>
+        </div>
+        <button
+          className="ctrl-icon ctrl-icon-close"
+          onClick={player.stop}
+          title="Close player"
+          aria-label="Close player"
+        >
+          <IconX />
+        </button>
+      </div>
+
+      <div className="topbar-player-controls">
         <button
           className={`ctrl-icon${player.shuffle ? ' active' : ''}`}
           onClick={player.toggleShuffle}
@@ -33,6 +54,14 @@ export function MiniPlayer() {
           <IconSkipBack />
         </button>
         <button
+          className="ctrl-icon"
+          onClick={() => player.seekBy(-10)}
+          title="Back 10 seconds"
+          aria-label="Back 10 seconds"
+        >
+          <IconBack10 />
+        </button>
+        <button
           className="ctrl-icon play"
           onClick={player.toggle}
           title="Play/pause"
@@ -40,29 +69,36 @@ export function MiniPlayer() {
         >
           {player.playing ? <IconPause /> : <IconPlay />}
         </button>
+        <button
+          className="ctrl-icon"
+          onClick={() => player.seekBy(10)}
+          title="Forward 10 seconds"
+          aria-label="Forward 10 seconds"
+        >
+          <IconForward10 />
+        </button>
         <button className="ctrl-icon" onClick={player.next} title="Next" aria-label="Next">
           <IconSkipForward />
         </button>
-        <span className="topbar-player-name">{current.name}</span>
-        <button
-          className="ctrl-icon"
-          onClick={player.stop}
-          title="Close player"
-          aria-label="Close player"
-        >
-          <IconX />
-        </button>
       </div>
-      <input
-        type="range"
-        className="topbar-seek-input"
-        min={0}
-        max={player.duration || 0}
-        step={0.1}
-        value={player.position}
-        onChange={(e) => player.seek(Number(e.target.value))}
-        aria-label="Seek"
-      />
-    </>
+
+      <div className="topbar-seek">
+        <span className="topbar-seek-time">{formatDuration(player.position)}</span>
+        <div className="topbar-seek-bar">
+          <div className="topbar-seek-fill" style={{ width: `${pct}%` }} />
+          <input
+            type="range"
+            className="topbar-seek-input"
+            min={0}
+            max={duration}
+            step={0.1}
+            value={player.position}
+            onChange={(e) => player.seek(Number(e.target.value))}
+            aria-label="Seek"
+          />
+        </div>
+        <span className="topbar-seek-time">{formatDuration(duration)}</span>
+      </div>
+    </div>
   )
 }

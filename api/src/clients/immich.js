@@ -224,10 +224,11 @@ export function immichOriginalProxyPath(assetId) {
   return `/api/assets/${assetId}/original`;
 }
 
-export async function fetchImmichMedia(assetId, variant) {
+export async function fetchImmichMedia(assetId, variant, headers = {}) {
   const path =
     variant === 'thumbnail'
       ? immichThumbnailProxyPath(assetId)
       : immichOriginalProxyPath(assetId);
-  return immichFetch(path);
+  // Forward the client's Range header so video scrubbing works (see media.js).
+  return immichFetch(path, { headers });
 }

@@ -23,6 +23,10 @@ app.use(
   cors({
     origin: config.frontendOrigins.length > 0 ? config.frontendOrigins : true,
     credentials: true,
+    // The direct-upload path (Tailscale HTTPS, for >100 MB files that can't go
+    // through Cloudflare) is cross-origin and sends this header in place of the
+    // session cookie — it has to be allowed through the CORS preflight.
+    allowedHeaders: ['Content-Type', 'X-Upload-Key'],
   }),
 );
 app.use(express.json());
@@ -41,7 +45,24 @@ app.get('/api/health', (_req, res) => res.json({ ok: true }));
 // everything else under /api requires a valid app-level session — a second
 // layer behind Cloudflare Access, not a replacement for it (see lib/auth.js).
 app.use('/api', authRouter);
+
+// Direct-upload bypass: a POST /api/upload carrying a valid X-Upload-Key is
+// let through WITHOUT the app-session cookie. This exists only so large files
+// (>100 MB) can reach the box over the tailnet (Tailscale HTTPS), skipping
+// Cloudflare's 100 MB body cap — that cross-domain request can't send the
+// session cookie. Scoped tightly: only this one route, only when a key is
+// configured, and the key must match. The public/Cloudflare path never sends
+// the key, so it still goes through the normal session check below. The key
+// isn't secret (it's in the public bundle); the real boundary is that the
+// direct-upload origin is only reachable on the private tailnet.
+const directUploadOk = (req) =>
+  config.auth.directUploadKey &&
+  req.method === 'POST' &&
+  req.path === '/upload' &&
+  req.get('X-Upload-Key') === config.auth.directUploadKey;
+
 app.use('/api', (req, res, next) => {
+  if (directUploadOk(req)) return next();
   const authenticated = verifySessionCookieValue(
     getCookie(req, SESSION_COOKIE),
     config.auth.sessionSecret,
